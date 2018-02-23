@@ -58,8 +58,8 @@ def Metropolis(xindex, yindex, In_Data, stepsize, nbsteps, RanVarIndexes, Obs_Da
 
     counter=iter(list(np.arange(nbsteps)))
     for n in counter:
-        if n//100 == float(n)/100:
-            print("Step #",n)
+        #if n//100 == float(n)/100:
+        #   print("Step #",n)
 
         #Choose new random new value for RV
         i=0
@@ -71,6 +71,13 @@ def Metropolis(xindex, yindex, In_Data, stepsize, nbsteps, RanVarIndexes, Obs_Da
                       +random.uniform(-1,1)*stepsize[i]
             i=i+1
 
+        #A rescaler
+        #Check consistency of data
+        #if RV[23]>273.15:
+        #    RV[23]=273.15
+        #if RV[24]<20:
+        #    RV[24]=20
+
         #Evaluate the model at this new point
         #Change the input data with the random value
         for i in RanVarIndexes:
@@ -79,6 +86,7 @@ def Metropolis(xindex, yindex, In_Data, stepsize, nbsteps, RanVarIndexes, Obs_Da
         ToTest=np.reshape(ToTest, (1,67))
         Tz_mod = NeuralModel.predict(ToTest)
         Tb_mod = GetTb_DMRTML(Tz_mod[0], H, var.NbLayers, var.Freq, var.NbStreams)
+        Tb_mod = Tb_mod-5#Correction of the bias !
 
         #Computes the acceptance function, to be discussed...
         PreviousProb = Prob

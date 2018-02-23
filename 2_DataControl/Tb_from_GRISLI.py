@@ -11,9 +11,6 @@ import sys
 sys.path.insert(0, "/home/passalao/Documents/SMOS-FluxGeo/BIOG")
 import BIOG
 
-#import BIOG_Functions as fun
-#import BIOG_Variables as var
-
 Start=time.clock()
 #Import GRISLI Data
 nc = netCDF4.Dataset('../../SourceData/WorkingFiles/GRISLI4KERAS.nc')
@@ -40,13 +37,13 @@ for c in np.arange(0,ny,1):
                 Tb[c,l]=BIOG.fun.GetTb_DMRTML(Tz, Thick, BIOG.var.NbLayers, BIOG.var.Freq, BIOG.var.NbStreams)
 
 # Export of the enriched GRISLI dataset for KERAS
-'''w_nc_fid = Dataset('../../SourceData/WorkingFiles/GRISLI_Tb.nc', 'w', format='NETCDF4')
+w_nc_fid = Dataset('../../SourceData/WorkingFiles/GRISLI_Tb.nc', 'w', format='NETCDF4')
 w_nc_fid.description = "Tb computed from stationary run of GRISLI "
 w_nc_fid.createDimension("x", nc.dimensions['x'].size)
 w_nc_fid.createDimension("y", nc.dimensions['y'].size)
 w_nc_fid.createVariable('Tb','float64',nc.variables['H'].dimensions)
 w_nc_fid.variables['Tb'][:] = Tb
-w_nc_fid.close()'''
+w_nc_fid.close()
 
 Stop=time.clock()
 print("Elapsed time: ", Stop-Start, 's')
