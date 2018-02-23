@@ -3,3 +3,4 @@
 import BIOG_Functions as fun
 import BIOG_Variables as var
 import BIOG_Classes as bc
+import NC_Resources as ncr

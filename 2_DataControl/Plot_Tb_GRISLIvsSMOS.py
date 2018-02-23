@@ -44,26 +44,34 @@ f = si.interp2d(X[0, :], Y[:, 0], Tb_Obs, kind='cubic')
 Tb_SMOS = f(xG, yG)  # Interpolate on the new grid
 
 # scatterplot
-import seaborn
-#x=np.reshape(Tb_SMOS.T[::-1], (nx_Mod*ny_Mod, 1))
-#y=np.reshape(Tb_Mod, (nx_Mod*ny_Mod, 1))
-#seaborn.kdeplot(x[:,0],y[:,0])
-plt.scatter(Tb_SMOS[::-1], Tb_Mod, color='DarkGreen', s=1);
+'''import seaborn
+x=np.reshape(Tb_SMOS.T[::-1], (nx_Mod*ny_Mod, 1))
+y=np.reshape(Tb_Mod, (nx_Mod*ny_Mod, 1))
+seaborn.kdeplot(x[:,0],y[:,0])'''
+
+plt.scatter(Tb_SMOS[::-1], Tb_Mod, color='DarkGreen', s=0.001);
 plt.plot([0, 270], [0, 270], color='b')
+plt.autoscale(True)
+plt.grid()
+#plt.axis("equal")
 plt.xlim(200, 270)
 plt.ylim(200, 270)
 plt.xlabel('Tb SMOS (K)')
 plt.ylabel('Tb GRISLI+SMRT (K)')
-plt.savefig("../../OutputData/img/Tb_SMOSvsMod.png")
+plt.savefig("../../OutputData/img/Tb_SMOSvsMod_DMRTML.png")
 plt.show()
 
-'''# Geographic plot
+# Geographic plot
+#Error=Tb_SMOS[::-1]-Tb_Mod
+
 fig, ax = plt.subplots()
 cmap = mpl.cm.coolwarm
-norm = mpl.colors.Normalize(vmin=200, vmax=270)
-myplot = plt.pcolormesh(Tb_SMOS[::-1], cmap=cmap, norm=norm)
-cbar = fig.colorbar(myplot, ticks=np.arange(200, 270, 10))
-cbar.ax.set_xticklabels(['200', '250'])  # vertically oriented colorbar
+norm = mpl.colors.Normalize(vmin=-10, vmax=10)
+myplot = plt.pcolormesh(Tb_SMOS[::-1]-Tb_Mod, cmap=cmap, norm=norm)
+cbar = fig.colorbar(myplot, ticks=np.arange(-10, 10, 1))
+cbar.ax.set_xticklabels(['-10', '0', '10'])  # vertically oriented colorbar
 plt.autoscale(True)
 plt.axis('equal')
-plt.show()'''
+plt.savefig("../../OutputData/img/Error_SMOS-sMod_DMRTML.png")
+plt.show()
+plt.close()

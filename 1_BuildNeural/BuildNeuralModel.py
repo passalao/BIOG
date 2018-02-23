@@ -6,7 +6,7 @@ import numpy as np
 import netCDF4
 
 # Read in data
-print "Import Data"
+print("Import Data")
 nc = netCDF4.Dataset('../../SourceData/WorkingFiles/GRISLI4KERAS.nc')
 
 H = nc.variables["H"]
@@ -38,12 +38,12 @@ Zeta = np.reshape(Zeta, (nz,nx*ny))
 HDiv = np.reshape(HDiv, (nz,nx*ny))
 T = np.reshape(T[0:21,:,:], (nz,nx*ny))
 
-print "Define train and test datasets"
+print("Define train and test datasets")
 from sklearn.model_selection import train_test_split
 y = T.T #Target label
 X = np.concatenate((Zeta.T, H, Acc, Ts, PhiG, LogUh.T, HDiv.T), axis=1) #Random variables
 
-print "Rescale the datasets"
+print("Rescale the datasets")
 # Standardize the data: rescaling
 from sklearn.preprocessing import StandardScaler
 
@@ -54,14 +54,14 @@ X = StandardScaler().fit_transform(X)
 X_train, X_test, y_train, y_test = train_test_split(pd.DataFrame(X), pd.DataFrame(y), test_size=0.1, random_state=42)
 
 # Create the neural network
-print "Now create the neural network"
+print("Now create the neural network")
 from keras.models import Sequential
 from keras.layers import Dense
 
 model = Sequential()
 model.add(Dense(np.shape(X)[1]+1, input_dim=np.shape(X)[1], activation='sigmoid'))
-model.add(Dense(np.shape(X)[1]/3*2, activation='sigmoid'))
-model.add(Dense(np.shape(X)[1]/3, activation='sigmoid'))
+model.add(Dense(np.shape(X)[1]//3*2, activation='sigmoid'))
+model.add(Dense(np.shape(X)[1]//3, activation='sigmoid'))
 model.add(Dense(21))
 model.compile(optimizer='rmsprop', loss='mse', metrics=['mae'])
 model.fit(X_train, y_train, epochs=40, verbose=2)
@@ -69,4 +69,4 @@ model.save("../../SourceData/WorkingFiles/KERASModels/KERAS_2couches.h5")
 
 y_pred = model.predict(X_test)
 mse, mae = model.evaluate(X_test, y_test, verbose=1)
-print "score : ", mse ** 0.5, mae
+print("score : ", mse ** 0.5, mae)

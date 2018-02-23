@@ -3,6 +3,9 @@
 #
 import pandas as pd
 import netCDF4
+import sys
+sys.path.insert(0, "/home/passalao/Documents/SMOS-FluxGeo/BIOG")
+import BIOG
 import time
 import matplotlib.pyplot as plt
 import matplotlib as mpl
@@ -10,7 +13,7 @@ import numpy as np
 from keras.models import load_model
 from sklearn.preprocessing import StandardScaler
 
-nc = netCDF4.Dataset('../../SourceData/WorkingFiles/GRISLI4KERAS.nc')
+nc = netCDF4.Dataset(BIOG.var.Data)
 
 H = nc.variables["H"]
 LogUh = nc.variables["LogUh"]
@@ -41,12 +44,12 @@ HDiv = np.reshape(HDiv, (nz,nx*ny))
 T = np.reshape(T[0:21,:,:], (nz,nx*ny))
 Z = Zeta*H.T
 
-print "Define train and test datasets"
+print("Define train and test datasets")
 from sklearn.model_selection import train_test_split
 y = T.T #Target label
 X = np.concatenate((Zeta.T, H, Acc, Ts, PhiG, LogUh.T, HDiv.T), axis=1) #Random variables
 
-print "Rescale the datasets"
+print("Rescale the datasets")
 # Standardize the data: rescaling
 from sklearn.preprocessing import StandardScaler
 
@@ -74,16 +77,16 @@ fig, ax = plt.subplots()
 cmap = mpl.cm.coolwarm
 norm = mpl.colors.Normalize(vmin=-3, vmax=3)
 #myplot=plt.pcolormesh(Error_zmean, cmap=cmap, norm=norm)
-myplot=plt.pcolormesh(Error[20,:,:], cmap=cmap, norm=norm)
+myplot=plt.pcolormesh(Error[0,:,:], cmap=cmap, norm=norm)
 cbar = fig.colorbar(myplot, ticks=np.arange(-3, 4, 1))
 cbar.ax.set_xticklabels(['-3', '-2', '-1', '0', '1', '2','3'])  #   vertically oriented colorbar
 plt.autoscale(True)
 plt.axis('equal')
 plt.axis([0, 387, 0, 374])
-plt.savefig("../../OutputData/img/Error_NeuralModel_Basal.png")
+#plt.savefig("../../OutputData/img/Error_NeuralModel_Surface.png")
 plt.show()
 
-#Plot transect data
+'''#Plot transect data
 #DomeC : x=275, Pole Sud : y=185
 fig, ax = plt.subplots()
 cmap = mpl.cm.coolwarm
@@ -95,7 +98,7 @@ plt.autoscale(True)
 plt.axis([0,387,0,21])
 plt.gca().invert_yaxis()
 plt.savefig("../../OutputData/img/Error_NeuralModel_Transect_PoleSud.png")
-plt.show()
+plt.show()'''
 
 '''for t in np.arange(0,350,50):
     j=0
@@ -138,4 +141,4 @@ for x in X:
 #plt.plot(Data['Temp_pred'].values[1500:1520],Data['Z'].values[1500:1520])
 plt.show()'''
 
-print "Elapsed time: ", time.clock(), 's'
+print("Elapsed time: ", time.clock(), 's')

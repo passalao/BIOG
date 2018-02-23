@@ -28,14 +28,14 @@ def GetTb_DMRTML(Tz, H, NbLayers, Freq, NbStreams):
     i=0
     for z in zfin:
        density[i]=1000.*(0.916-0.593*math.exp(-0.01859*z))#From Macelloni et al, 2016
-       #radius[i]=1-0.9999*math.exp(-0.01859*z/1e4) #marche bien
+       radius[i]=1-0.9999*math.exp(-0.01859*z/1e4) #marche bien
        if density[i]>600:
           medium.append('I')
-          radius[i]=1.e-2
+          #radius[i]=1.e-2
        else:
           medium.append('S')
           #radius[i] = 1 - 0.9999 * math.exp(-0.01859 * z / 1e4)  # test
-          radius[i]=1e-4
+          #radius[i]=1e-4
        i=i+1
 
     dist = False                  # if True => use RAYLEIGH distribution of particles
@@ -45,23 +45,22 @@ def GetTb_DMRTML(Tz, H, NbLayers, Freq, NbStreams):
     return res.TbV(0)
 
 #Function that leads a MH bayesian inference by exploring a Random Variable (RV) space
-import math, random
+import math, random, copy
 import BIOG_Variables as var
 import BIOG_Classes as bc
 def Metropolis(xindex, yindex, In_Data, stepsize, nbsteps, RanVarIndexes, Obs_Data, FreeRV_sd, Obs_Data_sd, NeuralModel, Scaler):
     RV=In_Data[yindex,xindex,:]
-    #RV=In_Data[(var.Xnbcol-1)*y+x,:]
-    #Trace=RV #Start point in the parameter space
-    Score=1e6
+    Prior=copy.deepcopy(RV)#In_Data[yindex,xindex,:] #Set the prior value
+    Prob=0.
     Start=time.clock()
     Trace=bc.Trace(np.size(stepsize))
     H=Scaler.inverse_transform(RV)[21]#Get the ice thickness
 
-    for n in np.arange(nbsteps):
+    counter=iter(list(np.arange(nbsteps)))
+    for n in counter:
         if n//100 == float(n)/100:
             print("Step #",n)
 
-        PreviousScore=Score
         #Choose new random new value for RV
         i=0
         for rv in RV:
@@ -72,35 +71,26 @@ def Metropolis(xindex, yindex, In_Data, stepsize, nbsteps, RanVarIndexes, Obs_Da
                       +random.uniform(-1,1)*stepsize[i]
             i=i+1
 
-        #Consistency control on the data value
-        if RV[3]<0: #Geothermal flux should be positive
-            pass
-
         #Evaluate the model at this new point
-        #Change the input data with the random value, all along the vertical
+        #Change the input data with the random value
         for i in RanVarIndexes:
             In_Data[yindex, xindex, i]=RV[i]
         ToTest=In_Data[yindex, xindex, :]
         ToTest=np.reshape(ToTest, (1,67))
-        #ToTest.resize(1,67)
         Tz_mod = NeuralModel.predict(ToTest)
         Tb_mod = GetTb_DMRTML(Tz_mod[0], H, var.NbLayers, var.Freq, var.NbStreams)
-        #Computes the cost function, to be discussed...
-        Score=abs(Tb_mod-Obs_Data)
 
-        if np.size(Trace.Data) == np.size(RV):
-            Prob = math.exp(-((Tb_mod-Obs_Data)**2/(2*Obs_Data_sd**2)+
-                              (RV[24]-Trace.Data[24])**2/(2*FreeRV_sd[0,24]**2)+
-                              (RV[23]-Trace.Data[23])**2/(2*FreeRV_sd[0,23]**2)))
-        else:
-            Prob = math.exp(-((Tb_mod-Obs_Data)**2/(2*Obs_Data_sd**2)+
-                              (RV[24]-Trace.Data[-1,24])**2/(2*FreeRV_sd[0,24]**2)+
-                              (RV[23]-Trace.Data[-1,23])**2/(2*FreeRV_sd[0,23]**2)))
+        #Computes the acceptance function, to be discussed...
+        PreviousProb = Prob
+        Prob = math.exp(-((Tb_mod-Obs_Data)**2/(2*Obs_Data_sd**2)+\
+                          (Prior[24]-RV[24])**2/(2*FreeRV_sd[0,24]**2)+\
+                          (Prior[23]-RV[23])**2/(2*FreeRV_sd[0,23]**2)))
 
         #Acception/Rejection process
         RandNum = random.random()
-        if Score > PreviousScore :
-            if Prob<RandNum:
+        #print(RandNum, Prob)
+        if Prob < PreviousProb:
+            if Prob < RandNum:
                 if np.size(Trace.Data) == np.size(RV):  #Concerns the starting point only
                     RV=Trace.Data[:]
                 else:
@@ -114,7 +104,6 @@ def Metropolis(xindex, yindex, In_Data, stepsize, nbsteps, RanVarIndexes, Obs_Da
 
     Stop = time.clock()
     print("Inference computing time: ", Stop-Start)
-    #Trace=np.array(Tutu.Trace)
     return Trace
 
 '''def GetTb(Tz, H):
