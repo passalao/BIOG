@@ -49,7 +49,7 @@ Zeta = np.reshape(Zeta, (nx*ny, nz))
 HDiv = np.reshape(HDiv, (nx*ny, nz))
 #T = np.reshape(T[:,:, 0:21], (nz,nx*ny))
 #Z = Zeta*H
-print(T[150,150,0])
+
 print("Define the dataset and rescale it")
 from sklearn.model_selection import train_test_split
 X = np.concatenate((Zeta, H, Acc, Ts, PhiG, LogUh, HDiv), axis=1) #Random variables
@@ -92,8 +92,6 @@ ax[1, 1].set_ylim([0, 201.])
 #plt.savefig("../../OutputData/img/Error_SMOS-sMod_DMRTML.png")
 plt.show()
 plt.close()'''
-
-Output=[[[]]]
 
 for j in np.arange(ny_Obs):
     for i in np.arange(nx_Obs):
