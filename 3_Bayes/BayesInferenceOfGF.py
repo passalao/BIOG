@@ -107,6 +107,7 @@ for j in np.arange(ny_Obs):
                 Stop=time.clock()
                 print("Time of Bayesian inference: ", Stop-Start, "s")
                 UnScaledPostData = Scaler.inverse_transform(PostData.Data)
+                #print("DeltaTb:", np.mean(PostData.DeltaTb))
 
                 #Scatter
                 plt.clf()
@@ -117,8 +118,8 @@ for j in np.arange(ny_Obs):
                 plt.xlabel("Geothermal flux (mW/m$^2$)")
                 plt.ylabel("Surface temperature (K)")
                 plt.title("Colorbar: acceptance probability")
-                plt.savefig("../../OutputData/img/Bayes/Acceptance_"+str(i)+"_"+str(j)+".png")
-                #plt.show()
+                #plt.savefig("../../OutputData/img/Bayes/Acceptance_"+str(i)+"_"+str(j)+".png")
+                plt.show()
 
                 '''#Histograms
                 plt.clf()

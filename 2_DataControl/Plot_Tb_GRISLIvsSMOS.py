@@ -10,14 +10,19 @@ import scipy.interpolate as si
 import NC_Resources as ncr
 import seaborn as sns
 import pandas as pd
-
+import sys
+sys.path.insert(0, "/home/passalao/Documents/SMOS-FluxGeo/BIOG")
+import BIOG
 
 # Import Tb data computed from the model
 #Model = netCDF4.Dataset('../../SourceData/WorkingFiles/GRISLI_Tb.nc')
-Model = netCDF4.Dataset('../../SourceData/WorkingFiles/GRISLI_Tb_SMOSGrid.nc')
-ny_Mod = Model.dimensions['y'].size
-nx_Mod = Model.dimensions['x'].size
-Tb_Mod = Model.variables['Tb']
+Model1 = netCDF4.Dataset('../../SourceData/WorkingFiles/GRISLI_Tb_SMOSGrid_'+BIOG.var.RTModel+'_'+'Matzler'+'.nc')
+ny_Mod1 = Model1.dimensions['y'].size
+nx_Mod1 = Model1.dimensions['x'].size
+Tb_Mod1 = Model1.variables['Tb']
+
+#Model2 = netCDF4.Dataset('../../SourceData/WorkingFiles/GRISLI_Tb_SMOSGrid_'+BIOG.var.RTModel+'_'+'Tiuri'+'.nc')
+#Tb_Mod2 = Model2.variables['Tb']
 
 # Import SMOS data
 Obs = netCDF4.Dataset('../../SourceData/SMOS/SMOSL3_StereoPolar_AnnualMean_TbV_52.5deg_xy.nc')
@@ -29,37 +34,32 @@ Lat = Obs.variables['lat']
 Mask = Obs.variables['mask']
 
 GRISLI = netCDF4.Dataset('../../SourceData/WorkingFiles/GRISLIMappedonSMOS.nc')
-Acc = GRISLI.variables['H']
+Acc = GRISLI.variables['Acc']
+T = GRISLI.variables['T']
+Ts=T[:,:,0]
 
 #Select data in the continent
-Tb_Mod=Tb_Mod/np.array(Mask)
+Tb_Mod1=Tb_Mod1/np.array(Mask)
+#Tb_Mod2=Tb_Mod2/np.array(Mask)
 
 offset=0
 Tb_Obs=np.array(Tb_Obs)
-Tb_Mod=np.array(Tb_Mod)
+Tb_Mod1=np.array(Tb_Mod1)
+#Tb_Mod2=np.array(Tb_Mod2)
 Acc=np.array(Acc)
-Error=Tb_Obs[0]-(Tb_Mod+offset)
-
-'''# Geographic plot
-fig, ax = plt.subplots()
-cmap = mpl.cm.seismic
-norm = mpl.colors.Normalize(vmin=-10, vmax=10)
-myplot = plt.pcolormesh(Error, cmap=cmap, norm=norm)
-cbar = fig.colorbar(myplot, ticks=np.arange(-15, 15, 1))
-cbar.ax.set_xticklabels(['-15', '0', '15'])  # vertically oriented colorbar
-plt.autoscale(True)
-plt.axis('equal')
-#plt.savefig("../../OutputData/img/Error_SMOS-sMod_DMRTML.png")
-plt.show()'''
+Ts=np.array(Ts)
+Error=Tb_Obs[0]-(Tb_Mod1+offset)
 
 Tb_Obs=np.reshape(Tb_Obs,(201*225,1))
-Tb_Mod=np.reshape(Tb_Mod,(201*225,1))
+Tb_Mod1=np.reshape(Tb_Mod1,(201*225,1))
+#Tb_Mod2=np.reshape(Tb_Mod2,(201*225,1))
 Acc=np.reshape(Acc,(201*225,1))
+Ts=np.reshape(Ts,(201*225,1))
 Mask=np.reshape(Mask,(201*225,1))
 
 Acc4Plot=np.zeros(201*225)
 i=0
-acclim=0
+acclim=0.4
 for a in Acc:
     if a>acclim:
         Acc4Plot[i]=acclim
@@ -67,26 +67,35 @@ for a in Acc:
         Acc4Plot[i]=a
     i=i+1
 
-#print(np.reshape(np.array(df_clean2["Tb_Obs"]), (1, np.size(df_clean2["Tb_Obs"]))))
-
 # scatterplot
-#plt.figure(figsize=(6.5,6.5))
-myplot=plt.scatter(Tb_Obs, Tb_Mod+offset, c=Acc, s=0.1)
+myplot=plt.scatter(Tb_Obs, Tb_Mod1+offset, c=Acc4Plot, s=1e-3)
 cbar=plt.colorbar()
-cbar.set_label('Ice thickness (m)', rotation=270, labelpad=15)
 #cbar.set_label('Geothermal flux (mW/m2)', rotation=270, labelpad=15)
+cbar.set_label('Accumulation (m/a)', rotation=270, labelpad=15)
 plt.plot([0, 270], [0, 270], color='b')
-#plt.autoscale(True)
-#plt.text(252,222,"offset = "+str(offset)+" K")
 plt.grid()
 plt.axis("equal")
 plt.autoscale(True)
 plt.xlim(200, 270)
 plt.ylim(200, 270)
 plt.xlabel('Tb SMOS (K)')
-plt.ylabel('Tb GRISLI+SMRT (K)')
-#plt.savefig("../../OutputData/img/Tb_SMOSvsMod_DMRTML.png")
+plt.ylabel('Tb GRISLI+'+BIOG.var.RTModel+'(K)')
+plt.savefig("../../OutputData/img/Tb_SMOSvsMod_"+BIOG.var.RTModel+".png")
 plt.show()
+
+'''#plt.figure(figsize=(6.5,6.5))
+plt.scatter(Ts+273.15, Tb_Mod1, c="Red", s=10)
+plt.scatter(Ts+273.15, Tb_Mod2, c="Green", s=10)
+plt.plot([0, 270], [0, 270], color='b')
+plt.grid()
+plt.axis("equal")
+plt.autoscale(True)
+plt.xlim(200, 270)
+plt.ylim(200, 270)
+plt.xlabel('Tb Mätzler (K)')
+plt.ylabel('Tb Tiuri (K)')
+#plt.savefig("../../OutputData/img/Tb_SMOSvsMod_DMRTML.png")
+plt.show()'''
 
 '''#Jointplot
 #sns.set(style="white")
@@ -113,6 +122,18 @@ plt.plot([0, 270], [0, 270], color='b')
 plt.show()'''
 plt.close()
 
+
+'''# Geographic plot
+fig, ax = plt.subplots()
+cmap = mpl.cm.seismic
+norm = mpl.colors.Normalize(vmin=-10, vmax=10)
+myplot = plt.pcolormesh(Error, cmap=cmap, norm=norm)
+cbar = fig.colorbar(myplot, ticks=np.arange(-15, 15, 1))
+cbar.ax.set_xticklabels(['-15', '0', '15'])  # vertically oriented colorbar
+plt.autoscale(True)
+plt.axis('equal')
+#plt.savefig("../../OutputData/img/Error_SMOS-sMod_DMRTML.png")
+plt.show()'''
 
 '''
 #Once used to reproject data

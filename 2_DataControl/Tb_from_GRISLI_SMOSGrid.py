@@ -12,7 +12,7 @@ sys.path.insert(0, "/home/passalao/Documents/SMOS-FluxGeo/BIOG")
 import BIOG
 
 
-Start=time.clock()
+Start=time.time()
 #Import GRISLI Data
 nc = netCDF4.Dataset('../../SourceData/WorkingFiles/GRISLIMappedonSMOS.nc')
 ny=nc.dimensions['y'].size
@@ -27,24 +27,26 @@ T=T[:,:,0:21] #Select layers in the ice, no ground layers wanted.
 Tb=np.zeros((nx, ny))
 for c in np.arange(0,ny,1):
     if c//BIOG.var.Subsample==float(c)/BIOG.var.Subsample:
-        print("y=", c)
         for l in np.arange(0, nx, 1):
             if H[l,c]==1.0:#ocen pixels
                 continue
             if l // BIOG.var.Subsample == float(l) / BIOG.var.Subsample:
-                print("y=", c, " and x=", l, "time:", time.clock())
+                print("y=", c, " and x=", l, "time:", time.time()-Start)
                 Tz=T[l,c, :]
                 Thick=H[l,c]
-                Tb[l,c]=BIOG.fun.GetTb_DMRTML(Tz, Thick, BIOG.var.NbLayers, BIOG.var.Freq, BIOG.var.NbStreams)
+                if BIOG.var.RTModel=="DMRT-ML":
+                    Tb[l,c]=BIOG.fun.GetTb_DMRTML(Tz, Thick, BIOG.var.NbLayers, BIOG.var.Freq, BIOG.var.NbStreams, BIOG.var.Angle)
+                if BIOG.var.RTModel=="SMRT":
+                    Tb[l, c] = BIOG.fun.GetTb_SMRT(Tz, Thick, BIOG.var.NbLayers, BIOG.var.Freq, BIOG.var.Angle, BIOG.var.Perm)
 
 # Export of the enriched GRISLI dataset for KERAS
-w_nc_fid = Dataset('../../SourceData/WorkingFiles/GRISLI_Tb_SMOSGrid.nc', 'w', format='NETCDF4')
-w_nc_fid.description = "Tb computed from stationary run of GRISLI "
+w_nc_fid = Dataset('../../SourceData/WorkingFiles/GRISLI_Tb_SMOSGrid_'+BIOG.var.RTModel+'_'+BIOG.var.Perm+'.nc', 'w', format='NETCDF4')
+w_nc_fid.description = "Tb computed from stationary run of GRISLI with "+ BIOG.var.RTModel
 w_nc_fid.createDimension("x", nc.dimensions['x'].size)
 w_nc_fid.createDimension("y", nc.dimensions['y'].size)
 w_nc_fid.createVariable('Tb','float64',nc.variables['H'].dimensions)
 w_nc_fid.variables['Tb'][:] = Tb
 w_nc_fid.close()
 
-Stop=time.clock()
+Stop=time.time()
 print("Elapsed time: ", Stop-Start, 's')

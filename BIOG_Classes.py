@@ -6,3 +6,4 @@ class Trace:
         self.nbvar=nbvar;
         self.Data=np.zeros(nbvar);
         self.Cost=[1e-6];
+        self.DeltaTb=[]
