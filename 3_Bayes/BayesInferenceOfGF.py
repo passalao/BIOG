@@ -9,6 +9,7 @@
 import sys
 sys.path.insert(0, "/home/passalao/Documents/SMOS-FluxGeo/BIOG")
 import BIOG, NC_Resources as ncr
+import BIOG_Classes as bc
 import numpy as np
 import netCDF4, time, numbers
 from keras.models import load_model
@@ -47,8 +48,6 @@ Ts.resize(nbXYElts, 1)
 LogUh = np.reshape(LogUh, (nx*ny, nz))
 Zeta = np.reshape(Zeta, (nx*ny, nz))
 HDiv = np.reshape(HDiv, (nx*ny, nz))
-#T = np.reshape(T[:,:, 0:21], (nz,nx*ny))
-#Z = Zeta*H
 
 print("Define the dataset and rescale it")
 from sklearn.model_selection import train_test_split
@@ -72,26 +71,9 @@ print("Load the neural model")
 NeuralModel = load_model('../../SourceData/WorkingFiles/KERASModels/KERAS_2couches.h5')
 
 ss=BIOG.var.Subsample
-
-'''# Geographic plot
-fig, ax = plt.subplots(nrows=2, ncols=2, sharex='col', sharey='row')
-cmap = mpl.cm.seismic
-norm = mpl.colors.Normalize(vmin=-10, vmax=10)
-myplot=ax[0,0].pcolormesh(T[:,:,0]+273.15-Tb_Obs[0,:,:], cmap=cmap, norm=norm)
-#cbar = fig.colorbar(myplot, ticks=np.arange(-10, 10, 1))
-#cbar.ax.set_xticklabels(['-10', '0', '10'])  # vertically oriented colorbar
-norm = mpl.colors.Normalize(vmin=180, vmax=250)
-ax[1,0].pcolormesh(Tb_Obs[0,:,:], cmap=cmap, norm=norm)
-ax[1,1].pcolormesh(T[:, :, 0]+273.15-6, cmap=cmap, norm=norm)
-ax[0, 0].set_xlim([0, 225.])
-ax[0, 0].set_ylim([0, 201.])
-ax[1, 1].set_xlim([0, 225.])
-ax[1, 1].set_ylim([0, 201.])
-#plt.autoscale(True)
-#plt.axis('equal')
-#plt.savefig("../../OutputData/img/Error_SMOS-sMod_DMRTML.png")
-plt.show()
-plt.close()'''
+OutputRV=bc.StoreArray(nx_Obs, ny_Obs, 6)
+#OutputRV[150,150,3]=81.
+#print(np.shape(OutputRV))
 
 for j in np.arange(ny_Obs):
     for i in np.arange(nx_Obs):
@@ -101,13 +83,23 @@ for j in np.arange(ny_Obs):
                 print("H=",H_2D[i, j])
                 #Bayesian inference
                 print("Now, Bayesian inference for x=", i, "and y=", j)
-                Start=time.clock()
+                Start=time.time()
                 print("Tb=", Tb_SMOS, "and Ts=", T[i,j,0]+273.15)
                 PostData=BIOG.fun.Metropolis(i, j, X, ScaledSteps, BIOG.var.nbsteps, BIOG.var.ColIndex, Tb_SMOS, ScaledSD, BIOG.var.Obs_sd, NeuralModel, Scaler)
-                Stop=time.clock()
+                Stop=time.time()
                 print("Time of Bayesian inference: ", Stop-Start, "s")
                 UnScaledPostData = Scaler.inverse_transform(PostData.Data)
-                #print("DeltaTb:", np.mean(PostData.DeltaTb))
+
+                # TODO: supprimer les x premiers runs
+                # TODO: Prendre la valeur qui a le meilleur "cost"
+                OutputRV.Data[i,j,0]= np.mean(UnScaledPostData[:,23]) #Ts
+                OutputRV.Data[i,j,1]= np.std(UnScaledPostData[:,23]) #sigma Ts
+                OutputRV.Data[i,j,2]= np.mean(UnScaledPostData[:,24]) #PhiG
+                OutputRV.Data[i,j,3]= np.std(UnScaledPostData[:,24]) #sigma PhiG
+                OutputRV.Data[i,j,4]= np.mean(PostData.DeltaTb) #
+                #OutputRV[i,j,5]= np.std(UnScaledPostData[:,23]) #
+                OutputRV.Data[i,j,5]= np.max(PostData.Cost) #Ts
+                print(OutputRV.Data[i, j, :])
 
                 #Scatter
                 plt.clf()
@@ -141,5 +133,25 @@ for j in np.arange(ny_Obs):
                 #plt.show()
                 plt.close()'''
 
-#TODO... Storing the output data
+# Export of the enriched GRISLI dataset for KERAS
+w_nc = netCDF4.Dataset('../../OutputData/BayesedDataset.nc', 'w', format='NETCDF4')
+w_nc.description = "GRISLI data processed by a Bayesian inference "
+
+#for dim in nc_dims:
+w_nc.createDimension('x', nc.dimensions['x'].size)
+w_nc.createDimension('y', nc.dimensions['y'].size)
+w_nc.createVariable('Ts',np.float64, ('x', 'y'))
+w_nc.variables['Ts'][:] = OutputRV.Data[:,:,0]
+w_nc.createVariable('Ts_std',np.float64, ('x', 'y'))
+w_nc.variables['Ts_std'][:] = OutputRV.Data[:,:,1]
+w_nc.createVariable('PhiG',np.float64, ('x', 'y'))
+w_nc.variables['PhiG'][:] = OutputRV.Data[:,:,2]
+w_nc.createVariable('PhiG_std',np.float64, ('x', 'y'))
+w_nc.variables['PhiG_std'][:] = OutputRV.Data[:,:,3]
+w_nc.createVariable('DeltaTb',np.float64, ('x', 'y'))
+w_nc.variables['DeltaTb'][:] = OutputRV.Data[:,:,4]
+w_nc.createVariable('Cost',np.float64, ('x', 'y'))
+w_nc.variables['Cost'][:] = OutputRV.Data[:,:,5]
+
+w_nc.close()
 nc.close()

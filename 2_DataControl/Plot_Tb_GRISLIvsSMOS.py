@@ -49,6 +49,7 @@ Tb_Mod1=np.array(Tb_Mod1)
 Acc=np.array(Acc)
 Ts=np.array(Ts)
 Error=Tb_Obs[0]-(Tb_Mod1+offset)
+Error=Error*(4-np.array(Mask))/3
 
 Tb_Obs=np.reshape(Tb_Obs,(201*225,1))
 Tb_Mod1=np.reshape(Tb_Mod1,(201*225,1))
@@ -80,7 +81,7 @@ plt.xlim(200, 270)
 plt.ylim(200, 270)
 plt.xlabel('Tb SMOS (K)')
 plt.ylabel('Tb GRISLI+'+BIOG.var.RTModel+'(K)')
-plt.savefig("../../OutputData/img/Tb_SMOSvsMod_"+BIOG.var.RTModel+".png")
+#plt.savefig("../../OutputData/img/Tb_SMOSvsMod_"+BIOG.var.RTModel+".png")
 plt.show()
 
 '''#plt.figure(figsize=(6.5,6.5))
@@ -122,18 +123,17 @@ plt.plot([0, 270], [0, 270], color='b')
 plt.show()'''
 plt.close()
 
-
-'''# Geographic plot
+# Geographic plot
 fig, ax = plt.subplots()
 cmap = mpl.cm.seismic
-norm = mpl.colors.Normalize(vmin=-10, vmax=10)
+norm = mpl.colors.Normalize(vmin=-20, vmax=20)
 myplot = plt.pcolormesh(Error, cmap=cmap, norm=norm)
-cbar = fig.colorbar(myplot, ticks=np.arange(-15, 15, 1))
+cbar = fig.colorbar(myplot, ticks=np.arange(-20, 21, 5))
 cbar.ax.set_xticklabels(['-15', '0', '15'])  # vertically oriented colorbar
 plt.autoscale(True)
 plt.axis('equal')
-#plt.savefig("../../OutputData/img/Error_SMOS-sMod_DMRTML.png")
-plt.show()'''
+plt.savefig("../../OutputData/img/Error_SMOS-Mod_DMRTML.png")
+plt.show()
 
 '''
 #Once used to reproject data

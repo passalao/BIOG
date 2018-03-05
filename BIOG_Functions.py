@@ -116,7 +116,8 @@ def Metropolis(xindex, yindex, In_Data, stepsize, nbsteps, RanVarIndexes, Obs_Da
     Trace=bc.Trace(np.size(stepsize))
     H=Scaler.inverse_transform(RV)[21]#Get the ice thickness
 
-    Bias = 0.0
+    Bias_ini = 0.0#To correct model bias
+    Bias=Bias_ini
 
     counter=iter(list(np.arange(nbsteps)))
     for n in counter:
@@ -155,6 +156,8 @@ def Metropolis(xindex, yindex, In_Data, stepsize, nbsteps, RanVarIndexes, Obs_Da
             Tb_mod = GetTb_SMRT(Tz_mod[0], H, var.NbLayers, var.Freq, var.Angle, var.Perm)
         Tb_mod = Tb_mod + Bias#Correction of the bias !
 
+        DeltaTb=Tb_mod-Obs_Data
+
         #Computes the acceptance function, to be discussed...
         PreviousProb = Prob
         Prob = math.exp(-((Tb_mod-Obs_Data)**2/(2*Obs_Data_sd**2)+\
@@ -168,19 +171,20 @@ def Metropolis(xindex, yindex, In_Data, stepsize, nbsteps, RanVarIndexes, Obs_Da
             if Prob < RandNum:
                 if np.size(Trace.Data) == np.size(RV):  #Concerns the starting point only
                     RV=Trace.Data[:]
-                    Bias=0.0
+                    Bias=Bias_ini
                 else:
                     RV=Trace.Data[-1,:]
                     Bias=Trace.DeltaTb[-1]
             else:
                 Trace.Data=np.vstack((Trace.Data,RV))
                 Trace.Cost = np.append(Trace.Cost, Prob)
-                Trace.DeltaTb.append(Bias)# np.vstack((Trace.DeltaTb, Bias))
+                Trace.Bias.append(Bias)
+                Trace.DeltaTb.append(DeltaTb)
         else:
             Trace.Data=np.vstack((Trace.Data,RV))
             Trace.Cost = np.append(Trace.Cost, Prob)
-            Trace.DeltaTb.append(Bias)#=np.vstack((Trace.DeltaTb,Bias))
-
+            Trace.Bias.append(Bias)
+            Trace.DeltaTb.append(DeltaTb)
     Stop = time.clock()
     print("Inference computing time: ", Stop-Start)
     return Trace
