@@ -11,7 +11,7 @@ sys.path.insert(0, "/home/passalao/Documents/SMOS-FluxGeo/BIOG")
 import BIOG
 
 # Import data computed from the model
-Model1 = netCDF4.Dataset('../../OutputData/BayesedDataset_Sample10_Bias-5.nc')
+Model1 = netCDF4.Dataset('../../OutputData/BayesedDataset_DomeC_FreeBias.nc')#Sample10_Bias-5.nc')
 ny_Mod1 = Model1.dimensions['y'].size
 nx_Mod1 = Model1.dimensions['x'].size
 Ts = Model1.variables['Ts']
@@ -20,7 +20,7 @@ PhiG = Model1.variables['PhiG']
 sigPhiG = Model1.variables['PhiG_std']
 DeltaTb = Model1.variables['DeltaTb']
 Cost = Model1.variables['Cost']
-
+Bias = Model1.variables['Bias']
 #Ts=np.reshape(Ts,(201*225,1))
 
 '''# scatterplot
@@ -39,7 +39,19 @@ plt.ylabel('Tb GRISLI+'+BIOG.var.RTModel+'(K)')
 plt.savefig("../../OutputData/img/Tb_SMOSvsMod_"+BIOG.var.RTModel+".png")
 plt.show()'''
 
-'''# Geographic plot
+# Geographic plot
+fig, ax = plt.subplots()
+cmap = mpl.cm.binary
+norm = mpl.colors.Normalize(vmin=0, vmax=1)
+myplot = plt.pcolormesh(Cost, cmap=cmap, norm=norm)
+cbar = fig.colorbar(myplot, ticks=np.arange(0, 1.1, 0.1))
+cbar.ax.set_xticklabels(['-15', '0', '15'])  # vertically oriented colorbar
+plt.autoscale(True)
+plt.axis('equal')
+#plt.savefig("../../OutputData/img/Error_SMOS-sMod_DMRTML.png")
+plt.show()
+
+# Geographic plot
 fig, ax = plt.subplots()
 cmap = mpl.cm.Reds
 norm = mpl.colors.Normalize(vmin=0, vmax=10)
@@ -49,9 +61,9 @@ cbar.ax.set_xticklabels(['-15', '0', '15'])  # vertically oriented colorbar
 plt.autoscale(True)
 plt.axis('equal')
 #plt.savefig("../../OutputData/img/Error_SMOS-sMod_DMRTML.png")
-plt.show()'''
+plt.show()
 
-'''# Geographic plot
+# Geographic plot
 fig, ax = plt.subplots()
 cmap = mpl.cm.Reds
 norm = mpl.colors.Normalize(vmin=0, vmax=20)
@@ -61,9 +73,9 @@ cbar.ax.set_xticklabels(['-15', '0', '15'])  # vertically oriented colorbar
 plt.autoscale(True)
 plt.axis('equal')
 #plt.savefig("../../OutputData/img/Error_SMOS-sMod_DMRTML.png")
-plt.show()'''
+plt.show()
 
-'''# Geographic plot
+# Geographic plot
 fig, ax = plt.subplots()
 cmap = mpl.cm.Reds
 norm = mpl.colors.Normalize(vmin=0, vmax=120)
@@ -73,4 +85,16 @@ cbar.ax.set_xticklabels(['-15', '0', '15'])  # vertically oriented colorbar
 plt.autoscale(True)
 plt.axis('equal')
 #plt.savefig("../../OutputData/img/Error_SMOS-sMod_DMRTML.png")
-plt.show()'''
+plt.show()
+
+# Geographic plot
+fig, ax = plt.subplots()
+cmap = mpl.cm.Reds_r
+norm = mpl.colors.Normalize(vmin=-5, vmax=0)
+myplot = plt.pcolormesh(Bias, cmap=cmap, norm=norm)
+cbar = fig.colorbar(myplot, ticks=np.arange(-5, 0, 1))
+cbar.ax.set_xticklabels(['-15', '0', '15'])  # vertically oriented colorbar
+plt.autoscale(True)
+plt.axis('equal')
+#plt.savefig("../../OutputData/img/Error_SMOS-sMod_DMRTML.png")
+plt.show()

@@ -31,13 +31,14 @@ for c in np.arange(0,ny,1):
             if H[l,c]==1.0:#ocen pixels
                 continue
             if l // BIOG.var.Subsample == float(l) / BIOG.var.Subsample:
-                print("y=", c, " and x=", l, "time:", time.time()-Start)
+                #print("y=", c, " and x=", l, "time:", time.time()-Start)
                 Tz=T[l,c, :]
                 Thick=H[l,c]
                 if BIOG.var.RTModel=="DMRT-ML":
-                    Tb[l,c]=BIOG.fun.GetTb_DMRTML(Tz, Thick, BIOG.var.NbLayers, BIOG.var.Freq, BIOG.var.NbStreams, BIOG.var.Angle)
+                    Tb[l,c]=BIOG.fun.GetTb_DMRTML(Tz, Thick, BIOG.var.NbLayers, BIOG.var.Freq, BIOG.var.Angle, BIOG.var.NbStreams)
                 if BIOG.var.RTModel=="SMRT":
                     Tb[l, c] = BIOG.fun.GetTb_SMRT(Tz, Thick, BIOG.var.NbLayers, BIOG.var.Freq, BIOG.var.Angle, BIOG.var.Perm)
+                print(Tb[l,c])
 
 # Export of the enriched GRISLI dataset for KERAS
 w_nc_fid = Dataset('../../SourceData/WorkingFiles/GRISLI_Tb_SMOSGrid_'+BIOG.var.RTModel+'_'+BIOG.var.Perm+'.nc', 'w', format='NETCDF4')

@@ -12,9 +12,9 @@ sys.path.insert(0, "/home/passalao/dmrtml")
 import dmrtml
 from pylab import *
 
-def GetTb_DMRTML(Tz, H, NbLayers, Freq, NbStreams, Angle):
+def GetTb_DMRTML(Tz, H, NbLayers, Freq, Angle, NbStreams):
     l = NbLayers  # number of layers
-    height = np.array([H/l]* l)
+    height = np.array([H/l]*l)
     #Prepare temperature field and interpolate on the layer altitude
     temperature = np.transpose(Tz)+273.15
     nbinputlayers=np.size(temperature)
@@ -31,50 +31,54 @@ def GetTb_DMRTML(Tz, H, NbLayers, Freq, NbStreams, Angle):
        radius[i]=1-0.9999*math.exp(-0.01859*z/1e4) #marche bien
        if density[i]>600:
           medium.append('I')
-          #radius[i]=1.e-2
        else:
           medium.append('S')
-          #radius[i] = 1 - 0.9999 * math.exp(-0.01859 * z / 1e4)  # test
-          #radius[i]=1e-4
+
        i=i+1
 
-    dist = False                  # if True => use RAYLEIGH distribution of particles
-    soilp = None # dmrtml.HUTRoughSoilParams(273) # other parameters have their default value
-    res = dmrtml.dmrtml(Freq,NbStreams,height,density,radius,temp, tau=dmrtml.NONSTICKY,medium=medium,dist=dist,soilp=soilp)
+    radius = np.array([2e-4]*l)
+    density = np.array([200, 400])
 
-    CosAngle=math.cos(Angle)
+    dist = False                  # if True => use RAYLEIGH distribution of particles
+    soilp = None #dmrtml.HUTRoughSoilParams(273) # other parameters have their default value
+    res = dmrtml.dmrtml(Freq,NbStreams,height,density,radius,temp, tau=[0.1,0.1],medium=medium,dist=dist,soilp=soilp)
+
+    '''CosAngle=math.cos(Angle)
     BestAngle=-9999
     i=0
     for a in res.mhu:
         if abs(a-CosAngle)<abs(BestAngle-CosAngle):
             BestAngle=i
-        i=i+1
+        i=i+1'''
+    #print(res.TbV())
     #print(BestAngle)
     #print("cosinus: ", np.arccos(res.mhu)/math.pi*180.)
-    return res.TbV(BestAngle)
-
-
+    return res.TbV(Angle)
 
 from smrt.permittivity.ice import ice_permittivity_tiuri84
 from smrt.permittivity.ice import ice_permittivity_matzler87
 def GetTb_SMRT(Tz, H, NbLayers, Freq, Angle, Perm):
     l = NbLayers  # number of layers
+    nbinputlayers=np.size(Tz)
     thickness = np.array([H/l]* l)
 
     #Prepare temperature field and interpolate on the layer altitude
     temperature = np.transpose(Tz)+273.15
-    zini=np.linspace(0,H,21)
+    zini=np.linspace(0,H,nbinputlayers)
     zfin=np.linspace(0,H,l)
-    interp_temperature=np.interp(zfin, zini, temperature[::-1])[::-1]
+    temp=np.interp(zfin, zini, temperature[::-1])[::-1]
 
     density=np.zeros(l)
+    p_ex=np.zeros(l)
+
     i=0
     for z in zfin:
        density[i]=1000.*(0.916-0.593*math.exp(-0.01859*z))#From Macelloni et al, 2016
+       p_ex[i] = 1 - 0.9999 * math.exp(-0.01859 * z / 1e4)
        i=i+1
 
-    p_ex = 1./(917-density+100)#100)
-    p_ex[0] = 1e-4
+    #p_ex = 1./(917-density+100)#100)
+    #p_ex[0] = 1e-4
 
     if Perm=="Tiuri":
         ice_permittivity_model = ice_permittivity_tiuri84
@@ -85,13 +89,13 @@ def GetTb_SMRT(Tz, H, NbLayers, Freq, Angle, Perm):
     snowpack = make_snowpack(thickness=thickness,
                              microstructure_model="sticky_hard_spheres",
                              density=density,
-                             temperature=interp_temperature,
-                             stickiness=0.2, radius=p_ex,
-                             corr_length=p_ex,
-                             ice_permittivity_model=ice_permittivity_model)
+                             temperature=temp,
+                             stickiness=0.2, radius=p_ex)
+#                             corr_length=p_ex,
+#                             ice_permittivity_model=ice_permittivity_model)
 
     # create the snowpack
-    m = make_model("iba", "dort")
+    m = make_model("dmrt_qcacp_shortrange", "dort")#(other : iba...)
     # create the sensor
     radiometer = sensor.passive(Freq, Angle)
     # run the model
@@ -105,11 +109,12 @@ import BIOG_Variables as var
 import BIOG_Classes as bc
 def Metropolis(xindex, yindex, In_Data, stepsize, nbsteps, RanVarIndexes, Obs_Data, FreeRV_sd, Obs_Data_sd, NeuralModel, Scaler):
     #Add a column to InData to inverse DeltaTb
-    nx=np.shape(In_Data)[0]
-    ny=np.shape(In_Data)[1]
+    #nx=np.shape(In_Data)[0]
+    #ny=np.shape(In_Data)[1]
     #In_Data=np.concatenate(In_Data, np.zeros((nx,ny,1)))
 
     RV=In_Data[yindex,xindex,:]
+    #print(Scaler.inverse_transform(RV))
     Prior=copy.deepcopy(RV)#In_Data[yindex,xindex,:] #Set the prior value
     Prob=0.
     Start=time.clock()
@@ -118,6 +123,7 @@ def Metropolis(xindex, yindex, In_Data, stepsize, nbsteps, RanVarIndexes, Obs_Da
 
     Bias_ini = 0.0#To correct model bias
     Bias=Bias_ini
+    #Scaler.inverse_transform(RV)[23])
 
     counter=iter(list(np.arange(nbsteps)))
     for n in counter:
@@ -134,7 +140,7 @@ def Metropolis(xindex, yindex, In_Data, stepsize, nbsteps, RanVarIndexes, Obs_Da
                       +random.uniform(-1,1)*stepsize[i]
             i=i+1
 
-        Bias = Bias + random.uniform(-1,1)*0.0#No bias
+        Bias = Bias + random.uniform(-1,1)*1.0
 
         #Check consistency of data
         if Scaler.inverse_transform(RV)[23]>0: #for surface temperature
@@ -154,7 +160,7 @@ def Metropolis(xindex, yindex, In_Data, stepsize, nbsteps, RanVarIndexes, Obs_Da
             Tb_mod = GetTb_DMRTML(Tz_mod[0], H, var.NbLayers, var.Freq, var.NbStreams, var.Angle)
         if var.RTModel == "SMRT":
             Tb_mod = GetTb_SMRT(Tz_mod[0], H, var.NbLayers, var.Freq, var.Angle, var.Perm)
-        Tb_mod = Tb_mod + Bias#Correction of the bias !
+        Tb_mod = Tb_mod + Bias#Correction of the model bias !
 
         DeltaTb=Tb_mod-Obs_Data
 
@@ -162,7 +168,8 @@ def Metropolis(xindex, yindex, In_Data, stepsize, nbsteps, RanVarIndexes, Obs_Da
         PreviousProb = Prob
         Prob = math.exp(-((Tb_mod-Obs_Data)**2/(2*Obs_Data_sd**2)+\
                           (Prior[24]-RV[24])**2/(2*FreeRV_sd[0,24]**2)+\
-                          (Prior[23]-RV[23])**2/(2*FreeRV_sd[0,23]**2)))
+                          (Prior[23]-RV[23])**2/(2*FreeRV_sd[0,23]**2)+\
+                          (Bias_ini-Bias)**2/(2*1**2)))
 
         #Acception/Rejection process
         RandNum = random.random()
@@ -174,7 +181,7 @@ def Metropolis(xindex, yindex, In_Data, stepsize, nbsteps, RanVarIndexes, Obs_Da
                     Bias=Bias_ini
                 else:
                     RV=Trace.Data[-1,:]
-                    Bias=Trace.DeltaTb[-1]
+                    Bias=Trace.Bias[-1]
             else:
                 Trace.Data=np.vstack((Trace.Data,RV))
                 Trace.Cost = np.append(Trace.Cost, Prob)
