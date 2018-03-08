@@ -12,12 +12,13 @@ NbAtt=10
 
 #For radiative transfer:
 RTModel="SMRT" # SMRT or DMRT-ML
+#RTModel="DMRT-ML"
 Perm="Matzler"# Matzler or Tiuri for SMRT
 NbLayers=10
-Freq=1.4e9 #[Hz] Sensor frequency
-NbStreams=64# Number of directions for which radiative equation is solved for
+Freq=36.5e9 #[Hz] Sensor frequency
+NbStreams=16# Number of directions for which radiative equation is solved for
 Angle=52.5#[deg] View angle of the sensor
-Subsample=50 # to go faster for tests
+Subsample=25 # to go faster for tests
 
 #For inference process
 ModelData4Bayes='../../SourceData/WorkingFiles/GRISLIMappedonSMOS.nc'

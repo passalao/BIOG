@@ -4,15 +4,68 @@
 # SMRT model for Tb computation
 import sys
 sys.path.insert(0, "/home/passalao/smrt")
+sys.path.insert(0, "/home/passalao/dmrtml")
 from smrt import make_snowpack, make_model, sensor
+from smrt.permittivity.ice import ice_permittivity_matzler87, ice_permittivity_tiuri84
 import numpy as np
 import time, math
-import sys
-sys.path.insert(0, "/home/passalao/dmrtml")
 import dmrtml
 from pylab import *
 
-def GetTb_DMRTML(Tz, H, NbLayers, Freq, Angle, NbStreams):
+def GetTb(Tz, H, NbLayers, Freq, Angle, NbStreams, Perm, Model):
+    l = NbLayers  # number of layers
+    nbinputlayers=np.size(Tz)
+    temperature = np.transpose(Tz)+273.15
+    thickness = np.array([H/l]* l)
+    zini=np.linspace(0,H,nbinputlayers)
+    zfin=np.linspace(0,H,l)
+    temp=np.interp(zfin, zini, temperature[::-1])[::-1]
+    density=np.zeros(l)
+    radius=np.zeros(l)
+    medium=list()
+    stickiness=list()
+    soilp=None
+    dist=False#True
+
+    i=0
+    for z in zfin:
+       density[i]=1000.*(0.916-0.593*math.exp(-0.01859*z))#From Macelloni et al, 2016
+       radius[i]=1-0.9999*math.exp(-0.01859*z/1e4) #marche bien
+       if density[i]>500:
+          medium.append('I')
+          stickiness.append(0.1)
+       else:
+          medium.append('S')
+          stickiness.append(0.1)
+       i=i+1
+    radius = np.array([2e-4]*l)
+    density = [900]*l
+
+    if Model=="DMRT-ML":
+        res = dmrtml.dmrtml(Freq, NbStreams, thickness, density, radius, temp)#, tau=dmrtml.NONSTICKY)#, medium=medium,dist=dist,soilp=soilp)
+        return res.TbV(Angle)
+
+    if Model=="SMRT":
+        if Perm == "Tiuri":
+            ice_permittivity_model = ice_permittivity_tiuri84
+        if Perm == "Matzler":
+            ice_permittivity_model = ice_permittivity_matzler87
+
+        # create the snowpack
+        snowpack = make_snowpack(thickness=thickness,
+                                 microstructure_model="sticky_hard_spheres",
+                                 density=density,
+                                 temperature=temp,
+                                 radius=radius,
+                                 ice_permittivity_model=ice_permittivity_model)
+                                 #stickiness = stickiness)
+        # create the snowpack
+        m = make_model("dmrt_qcacp_shortrange", "dort")
+        radiometer = sensor.passive(Freq, Angle)
+        res = m.run(radiometer, snowpack)
+        return res.TbV()
+
+'''def GetTb_DMRTML(Tz, H, NbLayers, Freq, Angle, NbStreams):
     l = NbLayers  # number of layers
     height = np.array([H/l]*l)
     #Prepare temperature field and interpolate on the layer altitude
@@ -41,19 +94,11 @@ def GetTb_DMRTML(Tz, H, NbLayers, Freq, Angle, NbStreams):
 
     dist = False                  # if True => use RAYLEIGH distribution of particles
     soilp = None #dmrtml.HUTRoughSoilParams(273) # other parameters have their default value
-    res = dmrtml.dmrtml(Freq,NbStreams,height,density,radius,temp, tau=[0.1,0.1],medium=medium,dist=dist,soilp=soilp)
-
-    '''CosAngle=math.cos(Angle)
-    BestAngle=-9999
-    i=0
-    for a in res.mhu:
-        if abs(a-CosAngle)<abs(BestAngle-CosAngle):
-            BestAngle=i
-        i=i+1'''
+    res = dmrtml.dmrtml(Freq,NbStreams,height,density,radius,temp, tau=dmrtml.NONSTICKY)#,medium=medium,dist=dist,soilp=soilp)
     #print(res.TbV())
     #print(BestAngle)
     #print("cosinus: ", np.arccos(res.mhu)/math.pi*180.)
-    return res.TbV(Angle)
+    return res.TbV(Angle)'''
 
 from smrt.permittivity.ice import ice_permittivity_tiuri84
 from smrt.permittivity.ice import ice_permittivity_matzler87
@@ -90,11 +135,13 @@ def GetTb_SMRT(Tz, H, NbLayers, Freq, Angle, Perm):
                              microstructure_model="sticky_hard_spheres",
                              density=density,
                              temperature=temp,
-                             stickiness=0.2, radius=p_ex)
-#                             corr_length=p_ex,
+                             radius=p_ex)
+                             #stickiness = 0.1)
+    #corr_length=p_ex)
 #                             ice_permittivity_model=ice_permittivity_model)
 
     # create the snowpack
+    #m = make_model("iba", "dort")
     m = make_model("dmrt_qcacp_shortrange", "dort")#(other : iba...)
     # create the sensor
     radiometer = sensor.passive(Freq, Angle)
