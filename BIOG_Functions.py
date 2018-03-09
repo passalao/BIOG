@@ -23,26 +23,23 @@ def GetTb(Tz, H, NbLayers, Freq, Angle, NbStreams, Perm, Model):
     density=np.zeros(l)
     radius=np.zeros(l)
     medium=list()
-    stickiness=list()
+    stickiness=0.1
     soilp=None
     dist=False#True
 
     i=0
     for z in zfin:
        density[i]=1000.*(0.916-0.593*math.exp(-0.01859*z))#From Macelloni et al, 2016
-       radius[i]=1-0.9999*math.exp(-0.01859*z/1e4) #marche bien
-       if density[i]>500:
+       radius[i]=1-0.9999*math.exp(-0.01859*z/1e4)#diminue l'écart avec 0.997 et /1.3
+
+       '''if density[i]>500:
           medium.append('I')
-          stickiness.append(0.1)
        else:
-          medium.append('S')
-          stickiness.append(0.1)
+          medium.append('S')'''
        i=i+1
-    radius = np.array([2e-4]*l)
-    density = [900]*l
 
     if Model=="DMRT-ML":
-        res = dmrtml.dmrtml(Freq, NbStreams, thickness, density, radius, temp)#, tau=dmrtml.NONSTICKY)#, medium=medium,dist=dist,soilp=soilp)
+        res = dmrtml.dmrtml(Freq, NbStreams, thickness, density, radius, temp)# tau=dmrtml.NONSTICKY, medium=medium,dist=dist,soilp=soilp)
         return res.TbV(Angle)
 
     if Model=="SMRT":
@@ -57,7 +54,7 @@ def GetTb(Tz, H, NbLayers, Freq, Angle, NbStreams, Perm, Model):
                                  density=density,
                                  temperature=temp,
                                  radius=radius,
-                                 ice_permittivity_model=ice_permittivity_model)
+                                 ice_permittivity_model=ice_permittivity_model)#,
                                  #stickiness = stickiness)
         # create the snowpack
         m = make_model("dmrt_qcacp_shortrange", "dort")

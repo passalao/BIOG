@@ -15,13 +15,17 @@ sys.path.insert(0, "/home/passalao/Documents/SMOS-FluxGeo/BIOG")
 import BIOG
 
 # Import SMOS data
-Obs = netCDF4.Dataset('../../SourceData/SMOS/SMOSL3_StereoPolar_AnnualMean_TbV_52.5deg.nc')
+Obs = netCDF4.Dataset('../../SourceData/SMOS/SMOSL3_StereoPolar_AnnualMeanSansNDJ_TbV_52.5deg_xy.nc')
 ny_Obs = Obs.dimensions['cols'].size
 nx_Obs = Obs.dimensions['rows'].size
 Tb_Obs = Obs.variables['BT_V']
 Lon = Obs.variables['lon']
 Lat = Obs.variables['lat']
 Mask = Obs.variables['mask']
+
+Obs2 = netCDF4.Dataset('../../SourceData/SMOS/SMOSL3_StereoPolar_AnnualMean_TbV_52.5deg_xy.nc')
+Tb_Obs2 = Obs2.variables['BT_V']
+
 
 #Import GRISLI Data
 GRISLI = netCDF4.Dataset('../../SourceData/WorkingFiles/GRISLIMappedonSMOS.nc')
@@ -30,16 +34,18 @@ T = GRISLI.variables['T']
 Ts=T[:,:,0]
 
 #Import Tb data out of GRISLI
-Model1 = netCDF4.Dataset('../../SourceData/WorkingFiles/GRISLI_Tb_SMOSGrid_'+BIOG.var.RTModel+'_'+'Tiuri'+'.nc')
+Model1 = netCDF4.Dataset('../../SourceData/WorkingFiles/GRISLI_Tb_SMOSGrid_'+BIOG.var.RTModel+'_'+'Matzler'+'.nc')
 ny_Mod1 = Model1.dimensions['y'].size
 nx_Mod1 = Model1.dimensions['x'].size
 Tb_Mod1 = Model1.variables['Tb']
 
 #Select data in the continent
 Tb_Obs=Tb_Obs*(4-np.array(Mask))/3
+Tb_Obs2=Tb_Obs2*(4-np.array(Mask))/3
 Ts=(Ts+273.15)*(4-np.array(Mask))/3
 Tb_Mod1=Tb_Mod1*(4-np.array(Mask))/3
 DeltaT=Tb_Obs-Ts
+#DeltaT=Tb_Obs-Tb_Obs2
 
 Tb_Obs=np.array(Tb_Obs)
 Tb_Mod1=np.array(Tb_Mod1)
@@ -83,8 +89,8 @@ plt.show()'''
 
 # Geographic plot
 fig, ax = plt.subplots()
-cmap = mpl.cm.Reds_r#seismic
-norm = mpl.colors.Normalize(vmin=-40, vmax=0)
+cmap = mpl.cm.seismic#Reds_r#seismic
+norm = mpl.colors.Normalize(vmin=-20, vmax=20)
 myplot = plt.pcolormesh(DeltaT[0,:,:], cmap=cmap, norm=norm)
 cbar = fig.colorbar(myplot, ticks=np.arange(-40, 1, 5))
 cbar.ax.set_xticklabels(['-15', '0', '15'])  # vertically oriented colorbar
@@ -94,4 +100,3 @@ plt.axis('equal')
 plt.show()
 
 plt.close()
-

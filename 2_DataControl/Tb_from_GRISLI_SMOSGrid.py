@@ -11,6 +11,9 @@ import sys
 sys.path.insert(0, "/home/passalao/Documents/SMOS-FluxGeo/BIOG")
 import BIOG
 
+# Import SMOS data
+Obs = netCDF4.Dataset('../../SourceData/SMOS/SMOSL3_StereoPolar_AnnualMean_TbV_52.5deg_xy.nc')
+Mask = Obs.variables['mask']
 
 Start=time.time()
 #Import GRISLI Data
@@ -24,41 +27,34 @@ T = nc.variables['T'][:]  # extract/copy the data
 H = nc.variables['H'][:]  # extract/copy the data
 T=T[:,:,0:21] #Select layers in the ice, no ground layers wanted.
 
-Tb1=np.zeros((nx, ny))
+Tb=np.zeros((nx, ny))
 Tb2=np.zeros((nx, ny))
 
 for c in np.arange(0,ny,1):
     if c//BIOG.var.Subsample==float(c)/BIOG.var.Subsample:
         for l in np.arange(0, nx, 1):
-            if H[l,c]==1.0:#ocen pixels
-                continue
-            if l // BIOG.var.Subsample == float(l) / BIOG.var.Subsample:
-                #print("y=", c, " and x=", l, "time:", time.time()-Start)
+            if Mask[l,c]==1.0 and l // BIOG.var.Subsample == float(l) / BIOG.var.Subsample:
+                print("y=", c, " and x=", l, "time:", time.time()-Start)
                 Tz=T[l,c, :]
                 Thick=H[l,c]
-                #Tz=np.linspace(-50,0, 10)
-                #Thick=2000
-                Tb1[l,c]=BIOG.fun.GetTb(Tz, Thick, BIOG.var.NbLayers, BIOG.var.Freq, BIOG.var.Angle, BIOG.var.NbStreams, BIOG.var.Perm, "SMRT")
-                Tb2[l,c]=BIOG.fun.GetTb(Tz, Thick, BIOG.var.NbLayers, BIOG.var.Freq, BIOG.var.Angle, BIOG.var.NbStreams, BIOG.var.Perm, "DMRT-ML")
-                #Tb[l,c]=BIOG.fun.GetTb_SMRT(Tz, Thick, BIOG.var.NbLayers, BIOG.var.Freq, BIOG.var.Angle, BIOG.var.Perm)
-                print(Tb1[l,c])
+                Tb[l,c]=BIOG.fun.GetTb(Tz, Thick, BIOG.var.NbLayers, BIOG.var.Freq, BIOG.var.Angle, BIOG.var.NbStreams, BIOG.var.Perm, BIOG.var.RTModel)
+                #Tb2[l,c]=BIOG.fun.GetTb(Tz, Thick, BIOG.var.NbLayers, BIOG.var.Freq, BIOG.var.Angle, BIOG.var.NbStreams, BIOG.var.Perm, "SMRT")
+                #print(Tb[l,c])
 
-
-plt.scatter(np.reshape(Tb1,(201*225,1)), np.reshape(Tb2,(201*225,1)),s=1)
+'''plt.scatter(np.reshape(Tb,(201*225,1)), np.reshape(Tb2,(201*225,1)),s=1)
 plt.plot([0,300],[0,300], c="r")
 plt.xlim(200,270)
 plt.ylim(200,270)
-plt.show()
+plt.show()'''
 
-'''
 # Export of the enriched GRISLI dataset for KERAS
-w_nc_fid = Dataset('../../SourceData/WorkingFiles/GRISLI_Tb_SMOSGrid_'+BIOG.var.RTModel+'_'+BIOG.var.Perm+'.nc', 'w', format='NETCDF4')
+w_nc_fid = Dataset('../../SourceData/WorkingFiles/GRISLI_Tb_SMOSGrid_'+BIOG.var.RTModel+'_'+BIOG.var.Perm+'_Rexp.nc', 'w', format='NETCDF4')
 w_nc_fid.description = "Tb computed from stationary run of GRISLI with "+ BIOG.var.RTModel
 w_nc_fid.createDimension("x", nc.dimensions['x'].size)
 w_nc_fid.createDimension("y", nc.dimensions['y'].size)
 w_nc_fid.createVariable('Tb','float64',nc.variables['H'].dimensions)
 w_nc_fid.variables['Tb'][:] = Tb
-w_nc_fid.close()'''
+w_nc_fid.close()
 
 Stop=time.time()
 print("Elapsed time: ", Stop-Start, 's')
