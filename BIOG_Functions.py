@@ -17,9 +17,9 @@ def GetTb(Tz, H, NbLayers, Freq, Angle, NbStreams, Perm, Model):
     nbinputlayers=np.size(Tz)
     temperature = np.transpose(Tz)+273.15
     thickness = np.array([H/l]* l)
-    zini=np.linspace(0,H,nbinputlayers)
-    zfin=np.linspace(0,H,l)
-    temp=np.interp(zfin, zini, temperature[::-1])[::-1]
+    depthini=np.linspace(0,H,nbinputlayers)
+    depthfin=np.linspace(0,H,l)
+    temp=np.interp(depthfin, depthini, temperature[::-1])[::-1]
     density=np.zeros(l)
     radius=np.zeros(l)
     medium=list()
@@ -28,9 +28,9 @@ def GetTb(Tz, H, NbLayers, Freq, Angle, NbStreams, Perm, Model):
     dist=False#True
 
     i=0
-    for z in zfin:
-       density[i]=1000.*(0.916-0.593*math.exp(-0.01859*z))#From Macelloni et al, 2016
-       radius[i]=1-0.9999*math.exp(-0.01859*z/1e4)#diminue l'écart avec 0.997 et /1.3
+    for d in depthfin:
+       density[i]=1000.*(0.916-0.593*math.exp(-0.01859*d))#From Macelloni et al, 2016
+       radius[i]=1-0.9999*math.exp(-0.01859*d/1e4)#diminue l'écart avec 0.997 et /1.3
 
        '''if density[i]>500:
           medium.append('I')
@@ -109,6 +109,10 @@ def GetTb_SMRT(Tz, H, NbLayers, Freq, Angle, Perm):
     zini=np.linspace(0,H,nbinputlayers)
     zfin=np.linspace(0,H,l)
     temp=np.interp(zfin, zini, temperature[::-1])[::-1]
+    #print(temperature, temp)
+    #plt.plot(temperature, zini[::-1])
+    #plt.plot(temp, zfin[::-1])
+    #plt.show()
 
     density=np.zeros(l)
     p_ex=np.zeros(l)
@@ -116,11 +120,11 @@ def GetTb_SMRT(Tz, H, NbLayers, Freq, Angle, Perm):
     i=0
     for z in zfin:
        density[i]=1000.*(0.916-0.593*math.exp(-0.01859*z))#From Macelloni et al, 2016
-       p_ex[i] = 1 - 0.9999 * math.exp(-0.01859 * z / 1e4)
+       #p_ex[i] = 1 - 0.9999 * math.exp(-0.01859 * z / 1e4)
        i=i+1
 
-    #p_ex = 1./(917-density+100)#100)
-    #p_ex[0] = 1e-4
+    p_ex = 1./(917-density+100)#100)
+    p_ex[0] = 1e-4
 
     if Perm=="Tiuri":
         ice_permittivity_model = ice_permittivity_tiuri84
@@ -129,17 +133,18 @@ def GetTb_SMRT(Tz, H, NbLayers, Freq, Angle, Perm):
 
     # create the snowpack
     snowpack = make_snowpack(thickness=thickness,
-                             microstructure_model="sticky_hard_spheres",
+                             microstructure_model="exponential",#sticky_hard_spheres",
                              density=density,
                              temperature=temp,
-                             radius=p_ex)
+                             #radius=p_ex,
+                             corr_length=p_ex)
                              #stickiness = 0.1)
-    #corr_length=p_ex)
+
 #                             ice_permittivity_model=ice_permittivity_model)
 
     # create the snowpack
-    #m = make_model("iba", "dort")
-    m = make_model("dmrt_qcacp_shortrange", "dort")#(other : iba...)
+    m = make_model("iba", "dort")
+    #m = make_model("dmrt_qcacp_shortrange", "dort")
     # create the sensor
     radiometer = sensor.passive(Freq, Angle)
     # run the model

@@ -55,7 +55,7 @@ Tb_Mod1=np.reshape(Tb_Mod1,(201*225,1))
 Tb_Obs=np.reshape(Tb_Obs,(201*225,1))
 Ts=np.reshape(Ts,(201*225,1))
 
-'''# scatterplot
+# scatterplot
 myplot=plt.scatter(Tb_Mod1, Ts, c="Red", s=0.01)
 #cbar=plt.colorbar()
 #cbar.set_label('Geothermal flux (mW/m2)', rotation=270, labelpad=15)
@@ -66,13 +66,13 @@ plt.axis("equal")
 plt.autoscale(True)
 plt.xlim(200, 270)
 plt.ylim(200, 270)
-plt.xlabel('Tb SMRT Tiuri (K)')
+plt.xlabel('Tb DMRT-ML (K)')
 plt.ylabel('Ts GRISLI (K)')
-plt.savefig("../../OutputData/img/TbSMRTTiuri_vs_TsGRISLI.png")
-plt.show()'''
+#plt.savefig("../../OutputData/img/TbSMRTTiuri_vs_TsGRISLI.png")
+plt.show()
 
-'''# scatterplot
-myplot=plt.scatter(Tb_Obs, Ts, s=1e-1)
+# scatterplot
+myplot=plt.scatter(Tb_Mod1, Ts, s=1e-1)
 #cbar=plt.colorbar()
 #cbar.set_label('Geothermal flux (mW/m2)', rotation=270, labelpad=15)
 #cbar.set_label('Accumulation (m/a)', rotation=270, labelpad=15)
@@ -84,10 +84,10 @@ plt.xlim(200, 270)
 plt.ylim(200, 270)
 plt.xlabel('Tb SMOS (K)')
 plt.ylabel('Ts GRISLI (K)')
-plt.savefig("../../OutputData/img/TbSMOS_vs_TsGRISLI.png")
-plt.show()'''
+#plt.savefig("../../OutputData/img/TbSMOS_vs_TsGRISLI.png")
+plt.show()
 
-# Geographic plot
+'''# Geographic plot
 fig, ax = plt.subplots()
 cmap = mpl.cm.seismic#Reds_r#seismic
 norm = mpl.colors.Normalize(vmin=-20, vmax=20)
@@ -97,6 +97,6 @@ cbar.ax.set_xticklabels(['-15', '0', '15'])  # vertically oriented colorbar
 plt.autoscale(True)
 plt.axis('equal')
 #plt.savefig("../../OutputData/img/Delta_TbSMOS-TsGRISLI.png")
-plt.show()
+plt.show()'''
 
 plt.close()

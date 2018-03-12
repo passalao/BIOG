@@ -38,7 +38,7 @@ for c in np.arange(0,ny,1):
                 Tz=T[l,c, :]
                 Thick=H[l,c]
                 Tb[l,c]=BIOG.fun.GetTb(Tz, Thick, BIOG.var.NbLayers, BIOG.var.Freq, BIOG.var.Angle, BIOG.var.NbStreams, BIOG.var.Perm, BIOG.var.RTModel)
-                #Tb2[l,c]=BIOG.fun.GetTb(Tz, Thick, BIOG.var.NbLayers, BIOG.var.Freq, BIOG.var.Angle, BIOG.var.NbStreams, BIOG.var.Perm, "SMRT")
+                #Tb[l,c]=BIOG.fun.GetTb_SMRT(Tz, Thick, BIOG.var.NbLayers, BIOG.var.Freq, BIOG.var.Angle, BIOG.var.Perm)
                 #print(Tb[l,c])
 
 '''plt.scatter(np.reshape(Tb,(201*225,1)), np.reshape(Tb2,(201*225,1)),s=1)
@@ -48,7 +48,8 @@ plt.ylim(200,270)
 plt.show()'''
 
 # Export of the enriched GRISLI dataset for KERAS
-w_nc_fid = Dataset('../../SourceData/WorkingFiles/GRISLI_Tb_SMOSGrid_'+BIOG.var.RTModel+'_'+BIOG.var.Perm+'_Rexp.nc', 'w', format='NETCDF4')
+w_nc_fid = Dataset('../../SourceData/WorkingFiles/GRISLI_Tb_SMOSGrid_'+BIOG.var.RTModel+'_'+BIOG.var.Perm+'.nc', 'w', format='NETCDF4')
+#w_nc_fid = Dataset('../../SourceData/WorkingFiles/GRISLI_Tb_SMOSGrid_SMRT_Matzler_exp.nc', 'w', format='NETCDF4')
 w_nc_fid.description = "Tb computed from stationary run of GRISLI with "+ BIOG.var.RTModel
 w_nc_fid.createDimension("x", nc.dimensions['x'].size)
 w_nc_fid.createDimension("y", nc.dimensions['y'].size)

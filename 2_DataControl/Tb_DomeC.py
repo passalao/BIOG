@@ -33,13 +33,11 @@ DomeC_Data = loadtxt("../../SourceData/EDC_Temp_SlantCorrected.csv", comments="#
 Tz_Obs=DomeC_Data[:,1]-273.15
 Z=DomeC_Data[:,0]
 
-Tb_mod = BIOG.fun.GetTb_DMRTML(Tz_Obs[::-1], Z[-1], 10, 1.4e9, 16, 52.5)
-#Tb_mod = BIOG.fun.GetTb_SMRT(T[::-1], Z[-1], 10, 1.4e9, 52.5, "Tiuri")
+Tb_mod = BIOG.fun.GetTb(Tz_Obs[::-1], Z[-1], 10, 1.4e9, 52.5, 16, "Matzler", "DMRT-ML")
 print("Tb modèle avec Tz obs: ", Tb_mod)
 
-Tb_gr = BIOG.fun.GetTb_DMRTML(Tz_gr_DomeC, Z[-1], 10, 1.4e9, 16, 52.5)
+Tb_gr = BIOG.fun.GetTb(Tz_gr_DomeC, Z[-1], 10, 1.4e9, 52.5, 16, "Matzler", "DMRT-ML")
 print("Tb modèle avec Tz GRISLI: ", Tb_gr)
-
 
 '''# Geographic plot
 fig, ax = plt.subplots()

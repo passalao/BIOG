@@ -15,15 +15,11 @@ sys.path.insert(0, "/home/passalao/Documents/SMOS-FluxGeo/BIOG")
 import BIOG
 
 # Import Tb data computed from the model
-#Model = netCDF4.Dataset('../../SourceData/WorkingFiles/GRISLI_Tb.nc')
-
-Model1 = netCDF4.Dataset('../../SourceData/WorkingFiles/GRISLI_Tb_SMOSGrid_'+BIOG.var.RTModel+'_'+BIOG.var.Perm+'_Rexp.nc')
+#Model1 = netCDF4.Dataset('../../SourceData/WorkingFiles/GRISLI_Tb_SMOSGrid_SMRT_Matzler_exp.nc')
+Model1 = netCDF4.Dataset('../../SourceData/WorkingFiles/GRISLI_Tb_SMOSGrid_'+BIOG.var.RTModel+'_'+BIOG.var.Perm+'.nc')
 ny_Mod1 = Model1.dimensions['y'].size
 nx_Mod1 = Model1.dimensions['x'].size
 Tb_Mod1 = Model1.variables['Tb']
-
-#Model2 = netCDF4.Dataset('../../SourceData/WorkingFiles/GRISLI_Tb_SMOSGrid_'+'DMRT-ML'+'_'+'Matzler'+'.nc')
-#Tb_Mod2 = Model2.variables['Tb']
 
 # Import SMOS data
 Obs = netCDF4.Dataset('../../SourceData/SMOS/SMOSL3_StereoPolar_AnnualMeanSansNDJ_TbV_52.5deg_xy.nc')
@@ -45,7 +41,6 @@ g=9.81
 PMP=273.16-0.074*rho*g*(H[:,:]-30)/1e6-0.024
 GapToPMP=Tground-PMP+273.15
 
-offset=0.
 Tb_Obs=np.array(Tb_Obs)
 Tb_Mod1=np.array(Tb_Mod1)
 #Tb_Mod2=np.array(Tb_Mod2)
@@ -58,28 +53,11 @@ Error=Tb_Mod1-Tb_Obs[0]
 Error=Error*(4-np.array(Mask))/3
 GapTsTb=Ts-Tb_Obs[0]+273.15
 GapTsTb=GapTsTb*(4-np.array(Mask))/3
+GapTsTbMod=Ts-Tb_Mod1+273.15
+GapTsTbMod=GapTsTbMod*(4-np.array(Mask))/3
 
-#Tb_Mod2=Tb_Mod2/np.array(Mask)
-
-
-Tb_Obs=np.reshape(Tb_Obs,(201*225,1))
-Tb_Mod1=np.reshape(Tb_Mod1,(201*225,1))
-#Tb_Mod2=np.reshape(Tb_Mod2,(201*225,1))
-Acc=np.reshape(Acc,(201*225,1))
-Ts=np.reshape(Ts,(201*225,1))
-Mask=np.reshape(Mask,(201*225,1))
-
-'''Acc4Plot=np.zeros(201*225)
-i=0
-acclim=0.4
-for a in Acc:
-    if a>acclim:
-        Acc4Plot[i]=acclim
-    else:
-        Acc4Plot[i]=a
-    i=i+1'''
-
-'''outfile = r'../../SourceData/WorkingFiles/SMOSvsModel.nc'
+#Write output NetCDF file
+outfile = r'../../SourceData/WorkingFiles/SMOSvsModel.nc'
 cols = len(X[0,:])
 rows = len(Y[:,0])
 
@@ -102,23 +80,42 @@ Xout[:] = X[0,:]
 dsout.createVariable('TbSMOS','float64',('y','x'))
 dsout.variables['TbSMOS'][:] = np.array(Tb_Obs[::-1,::-1])
 dsout.createVariable('TsGRISLI','float64',('y','x'))
-dsout.variables['TsGRISLI'][:] = np.array(Ts[::-1,:])
+dsout.variables['TsGRISLI'][:] = np.array(Ts[::-1,:]+273.15)
 dsout.createVariable('DeltaToPMP','float64',('y','x'))
 dsout.variables['DeltaToPMP'][:] = np.array(GapToPMP[::-1,:])
 dsout.createVariable('TsGRISLI-TbSMOS','float64',('y','x'))
 dsout.variables['TsGRISLI-TbSMOS'][:] = np.array(GapTsTb[::-1,:])
 dsout.createVariable('TbModel','float64',('y','x'))
 dsout.variables['TbModel'][:] = np.array(Tb_Mod1[::-1,:])
-dsout.createVariable('TbGRISLI-TbSMOS','float64',('y','x'))
-dsout.variables['TbGRISLI-TbSMOS'][:] = np.array(Error[::-1,:])
-
+dsout.createVariable('TbModel-TbSMOS','float64',('y','x'))
+dsout.variables['TbModel-TbSMOS'][:] = np.array(Error[::-1,:])
+dsout.createVariable('TsGRISLI-TbModel','float64',('y','x'))
+dsout.variables['TsGRISLI-TbModel'][:] = np.array(GapTsTbMod[::-1,:])
 crs = dsout.createVariable('spatial_ref', 'i4')
 crs.spatial_ref='PROJCS["WGS_84_NSIDC_EASE_Grid_2_0_South",GEOGCS["GCS_WGS_1984",DATUM["D_WGS_1984",SPHEROID["WGS_1984",6378137,298.257223563]],PRIMEM["Greenwich",0],UNIT["Degree",0.017453292519943295]],PROJECTION["Lambert_Azimuthal_Equal_Area"],PARAMETER["latitude_of_origin",-90],PARAMETER["central_meridian",0],PARAMETER["false_easting",0],PARAMETER["false_northing",0],UNIT["Meter",1]]'
-'''
 
-# scatterplot
+#Prepare data for plot
+Tb_Obs=np.reshape(Tb_Obs,(201*225,1))
+Tb_Mod1=np.reshape(Tb_Mod1,(201*225,1))
+#Tb_Mod2=np.reshape(Tb_Mod2,(201*225,1))
+Acc=np.reshape(Acc,(201*225,1))
+Ts=np.reshape(Ts,(201*225,1))
+Mask=np.reshape(Mask,(201*225,1))
+
+'''Acc4Plot=np.zeros(201*225)
+i=0
+acclim=0.4
+for a in Acc:
+    if a>acclim:
+        Acc4Plot[i]=acclim
+    else:
+        Acc4Plot[i]=a
+    i=i+1'''
+
+
+'''# scatterplot
 #myplot=plt.scatter(Tb_Mod1, Tb_Mod2, c="Red", s=5, label="Mätzler")
-myplot=plt.scatter(Tb_Obs, Tb_Mod1, c="Red", s=5, label="Mätzler")
+myplot=plt.scatter(Tb_Obs, Tb_Mod1, c="Red", s=0.01)
 #myplot=plt.scatter(Tb_Obs, Tb_Mod2+offset, c="Darkgreen", s=5, label="Tiuri")
 #cbar=plt.colorbar()
 #cbar.set_label('Geothermal flux (mW/m2)', rotation=270, labelpad=15)
@@ -133,7 +130,7 @@ plt.ylim(200, 270)
 plt.xlabel('Tb SMOS (K)')
 plt.ylabel('Tb GRISLI+'+BIOG.var.RTModel+'(K)')
 #plt.savefig("../../OutputData/img/Tb_SMOSvsMod_"+BIOG.var.RTModel+".png")
-plt.show()
+plt.show()'''
 
 '''#plt.figure(figsize=(6.5,6.5))
 plt.scatter(Ts+273.15, Tb_Mod1, c="Red", s=10)
