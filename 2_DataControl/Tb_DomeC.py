@@ -9,6 +9,7 @@ import numpy as np
 import sys
 sys.path.insert(0, "/home/passalao/Documents/SMOS-FluxGeo/BIOG")
 import BIOG
+from numpy import loadtxt
 
 # Import SMOS data
 Obs = netCDF4.Dataset('../../SourceData/SMOS/SMOSL3_StereoPolar_AnnualMean_TbV_52.5deg_xy.nc')
@@ -19,25 +20,49 @@ Lon = Obs.variables['lon']
 Lat = Obs.variables['lat']
 Mask = Obs.variables['mask']
 
-print("Tb at Dome C:", Tb_Obs[0,64,161])
-
 #Import GRISLI data
 GRISLI = netCDF4.Dataset('../../SourceData/WorkingFiles/GRISLIMappedonSMOS.nc')
 H = GRISLI.variables['H']
 Zeta = GRISLI.variables['Zeta']
 Tz_gr = GRISLI.variables['T']
-Tz_gr_DomeC=Tz_gr[64,161,:]
 
-from numpy import loadtxt
+#Dome C
+print("         Dome C         ")
+print("Tb SMOS at Dome C:", Tb_Obs[0,65,167])
+Tz_gr_DomeC=Tz_gr[65,167,:]
 DomeC_Data = loadtxt("../../SourceData/EDC_Temp_SlantCorrected.csv", comments="#", delimiter=",", unpack=False)
 Tz_Obs=DomeC_Data[:,1]-273.15
 Z=DomeC_Data[:,0]
-
-Tb_mod = BIOG.fun.GetTb(Tz_Obs[::-1], Z[-1], 10, 1.4e9, 52.5, 16, "Matzler", "DMRT-ML")
+Tb_mod = BIOG.fun.GetTb(Tz_Obs[::-1], Z[-1], 10, 1.4e9, 52.5, 16, "Tiuri", "DMRT-ML")
 print("Tb modèle avec Tz obs: ", Tb_mod)
-
-Tb_gr = BIOG.fun.GetTb(Tz_gr_DomeC, Z[-1], 10, 1.4e9, 52.5, 16, "Matzler", "DMRT-ML")
+Tb_gr = BIOG.fun.GetTb(Tz_gr_DomeC, Z[-1], 10, 1.4e9, 52.5, 16, "Tiuri", "DMRT-ML")
 print("Tb modèle avec Tz GRISLI: ", Tb_gr)
+print(' ')
+
+#Vostok
+print("         Vostok         ")
+print("Tb SMOS at Vostok:", Tb_Obs[0,86,165])
+Tz_gr_Vostok=Tz_gr[86,165,:]
+Tz_Obs=[-57,-53,-48.5,-43,-36,-2]
+Z=3450.-np.array([0,500,1000,1500,2000,3450])
+Tb_mod = BIOG.fun.GetTb(Tz_Obs, Z[-1], 10, 1.4e9, 52.5, 16, "Tiuri", "DMRT-ML")
+print("Tb modèle avec Tz obs: ", Tb_mod)
+Tb_gr = BIOG.fun.GetTb(Tz_gr_Vostok, Z[-1], 10, 1.4e9, 52.5, 16, "Tiuri", "DMRT-ML")
+print("Tb modèle avec Tz GRISLI: ", Tb_gr)
+print(' ')
+
+#Dome Fuji
+print("         Dome Fuji         ")
+print("Tb SMOS at Dome Fuji:", Tb_Obs[0,143,147])
+Tz_gr_DF=Tz_gr[143,147,:]
+DomeF_Data = loadtxt("../../SourceData/DF_Temp.csv", comments="#", delimiter=" ", unpack=False)
+Tz_Obs=DomeF_Data[:,1]
+Z=DomeF_Data[:,1]
+Tb_mod = BIOG.fun.GetTb(Tz_Obs, Z[-1], 10, 1.4e9, 52.5, 16, "Tiuri", "DMRT-ML")
+print("Tb modèle avec Tz obs: ", Tb_mod)
+Tb_gr = BIOG.fun.GetTb(Tz_gr_DF, Z[-1], 10, 1.4e9, 52.5, 16, "Tiuri", "DMRT-ML")
+print("Tb modèle avec Tz GRISLI: ", Tb_gr)
+print(' ')
 
 '''# Geographic plot
 fig, ax = plt.subplots()
