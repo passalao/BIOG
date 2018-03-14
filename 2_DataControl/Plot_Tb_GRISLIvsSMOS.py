@@ -16,10 +16,14 @@ import BIOG
 
 # Import Tb data computed from the model
 #Model1 = netCDF4.Dataset('../../SourceData/WorkingFiles/GRISLI_Tb_SMOSGrid_SMRT_Matzler_exp.nc')
-Model1 = netCDF4.Dataset('../../SourceData/WorkingFiles/GRISLI_Tb_SMOSGrid_'+BIOG.var.RTModel+'_'+BIOG.var.Perm+'.nc')
+Model1 = netCDF4.Dataset('../../SourceData/WorkingFiles/GRISLI_Tb_SMOSGrid_'+BIOG.var.RTModel+'_'+BIOG.var.Perm+'_WithSnow.nc')
 ny_Mod1 = Model1.dimensions['y'].size
 nx_Mod1 = Model1.dimensions['x'].size
 Tb_Mod1 = Model1.variables['Tb']
+
+#Import emissivity data
+Emissivity = netCDF4.Dataset('../../SourceData/WorkingFiles/TbMod_and_Emissivity.nc')
+Em = Emissivity.variables['Emissivity']
 
 # Import SMOS data
 Obs = netCDF4.Dataset('../../SourceData/SMOS/SMOSL3_StereoPolar_AnnualMeanSansNDJ_TbV_52.5deg_xy.nc')
@@ -30,6 +34,7 @@ X = Obs.variables['x_ease2']
 Y = Obs.variables['y_ease2']
 Mask = Obs.variables['mask']
 
+#Import GRISLI data
 GRISLI = netCDF4.Dataset('../../SourceData/WorkingFiles/GRISLIMappedonSMOS.nc')
 Acc = GRISLI.variables['Acc']
 T = GRISLI.variables['T']
@@ -43,10 +48,14 @@ GapToPMP=Tground-PMP+273.15
 
 Tb_Obs=np.array(Tb_Obs)
 Tb_Mod1=np.array(Tb_Mod1)
+Em=np.array(Em)
+Tb_Mod1=Em*Tb_Mod1
+
 #Tb_Mod2=np.array(Tb_Mod2)
 Acc=np.array(Acc)
 Ts=np.array(Ts)
 Tb_Mod1=Tb_Mod1*(4-np.array(Mask))/3
+Em=Em*(4-np.array(Mask))/3
 Tb_Obs=Tb_Obs*(4-np.array(Mask))/3
 GapToPMP=GapToPMP*(4-np.array(Mask))/3
 Error=Tb_Mod1-Tb_Obs[0]
@@ -56,7 +65,7 @@ GapTsTb=GapTsTb*(4-np.array(Mask))/3
 GapTsTbMod=Ts-Tb_Mod1+273.15
 GapTsTbMod=GapTsTbMod*(4-np.array(Mask))/3
 
-#Write output NetCDF file
+'''#Write output NetCDF file
 outfile = r'../../SourceData/WorkingFiles/SMOSvsModel.nc'
 cols = len(X[0,:])
 rows = len(Y[:,0])
@@ -91,8 +100,11 @@ dsout.createVariable('TbModel-TbSMOS','float64',('y','x'))
 dsout.variables['TbModel-TbSMOS'][:] = np.array(Error[::-1,:])
 dsout.createVariable('TsGRISLI-TbModel','float64',('y','x'))
 dsout.variables['TsGRISLI-TbModel'][:] = np.array(GapTsTbMod[::-1,:])
+dsout.createVariable('Emissivity','float64',('y','x'))
+dsout.variables['Emissivity'][:] = np.array(Em[::-1,:])
 crs = dsout.createVariable('spatial_ref', 'i4')
 crs.spatial_ref='PROJCS["WGS_84_NSIDC_EASE_Grid_2_0_South",GEOGCS["GCS_WGS_1984",DATUM["D_WGS_1984",SPHEROID["WGS_1984",6378137,298.257223563]],PRIMEM["Greenwich",0],UNIT["Degree",0.017453292519943295]],PROJECTION["Lambert_Azimuthal_Equal_Area"],PARAMETER["latitude_of_origin",-90],PARAMETER["central_meridian",0],PARAMETER["false_easting",0],PARAMETER["false_northing",0],UNIT["Meter",1]]'
+'''
 
 #Prepare data for plot
 Tb_Obs=np.reshape(Tb_Obs,(201*225,1))
@@ -113,7 +125,7 @@ for a in Acc:
     i=i+1'''
 
 
-'''# scatterplot
+# scatterplot
 #myplot=plt.scatter(Tb_Mod1, Tb_Mod2, c="Red", s=5, label="Mätzler")
 myplot=plt.scatter(Tb_Obs, Tb_Mod1, c="Red", s=0.01)
 #myplot=plt.scatter(Tb_Obs, Tb_Mod2+offset, c="Darkgreen", s=5, label="Tiuri")
@@ -129,8 +141,8 @@ plt.xlim(200, 270)
 plt.ylim(200, 270)
 plt.xlabel('Tb SMOS (K)')
 plt.ylabel('Tb GRISLI+'+BIOG.var.RTModel+'(K)')
-#plt.savefig("../../OutputData/img/Tb_SMOSvsMod_"+BIOG.var.RTModel+".png")
-plt.show()'''
+plt.savefig("../../OutputData/img/Tb_SMOSvsMod_"+BIOG.var.RTModel+".png")
+plt.show()
 
 '''#plt.figure(figsize=(6.5,6.5))
 plt.scatter(Ts+273.15, Tb_Mod1, c="Red", s=10)

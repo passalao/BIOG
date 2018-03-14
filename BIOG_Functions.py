@@ -27,19 +27,20 @@ def GetTb(Tz, H, NbLayers, Freq, Angle, NbStreams, Perm, Model):
     soilp=None
     dist=False#True
 
-    i=0
+    #i=0
     for d in depthfin:
+       i=np.where(depthfin==d)[0]
        density[i]=1000.*(0.916-0.593*math.exp(-0.01859*d))#From Macelloni et al, 2016
        radius[i]=1-0.9999*math.exp(-0.01859*d/1e4)#diminue l'écart avec 0.997 et /1.3
 
-       '''if density[i]>500:
+       if density[i]>600:
           medium.append('I')
        else:
-          medium.append('S')'''
-       i=i+1
+          medium.append('S')
+       #i=i+1
 
     if Model=="DMRT-ML":
-        res = dmrtml.dmrtml(Freq, NbStreams, thickness, density, radius, temp)# tau=dmrtml.NONSTICKY, medium=medium,dist=dist,soilp=soilp)
+        res = dmrtml.dmrtml(Freq, NbStreams, thickness, density, radius, temp, medium=medium)#, permmodel="Tiuri")# tau=dmrtml.NONSTICKY, medium=medium,dist=dist,soilp=soilp)
         return res.TbV(Angle)
 
     if Model=="SMRT":

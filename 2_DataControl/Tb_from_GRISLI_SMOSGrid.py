@@ -27,7 +27,7 @@ T = nc.variables['T'][:]  # extract/copy the data
 H = nc.variables['H'][:]  # extract/copy the data
 T=T[:,:,0:21] #Select layers in the ice, no ground layers wanted.
 
-Tb=np.zeros((nx, ny))
+Tb1=np.zeros((nx, ny))
 Tb2=np.zeros((nx, ny))
 
 for c in np.arange(0,ny,1):
@@ -37,7 +37,8 @@ for c in np.arange(0,ny,1):
                 print("y=", c, " and x=", l, "time:", time.time()-Start)
                 Tz=T[l,c, :]
                 Thick=H[l,c]
-                Tb[l,c]=BIOG.fun.GetTb(Tz, Thick, BIOG.var.NbLayers, BIOG.var.Freq, BIOG.var.Angle, BIOG.var.NbStreams, BIOG.var.Perm, BIOG.var.RTModel)
+                Tb1[l,c]=BIOG.fun.GetTb(Tz, Thick, BIOG.var.NbLayers, BIOG.var.Freq, BIOG.var.Angle, BIOG.var.NbStreams, BIOG.var.Perm, BIOG.var.RTModel)
+                Tb2[l,c]=BIOG.fun.GetTb(Tz+1, Thick, BIOG.var.NbLayers, BIOG.var.Freq, BIOG.var.Angle, BIOG.var.NbStreams, BIOG.var.Perm, BIOG.var.RTModel)
                 #Tb[l,c]=BIOG.fun.GetTb_SMRT(Tz, Thick, BIOG.var.NbLayers, BIOG.var.Freq, BIOG.var.Angle, BIOG.var.Perm)
                 #print(Tb[l,c])
 
@@ -48,13 +49,15 @@ plt.ylim(200,270)
 plt.show()'''
 
 # Export of the enriched GRISLI dataset for KERAS
-w_nc_fid = Dataset('../../SourceData/WorkingFiles/GRISLI_Tb_SMOSGrid_'+BIOG.var.RTModel+'_'+BIOG.var.Perm+'.nc', 'w', format='NETCDF4')
-#w_nc_fid = Dataset('../../SourceData/WorkingFiles/GRISLI_Tb_SMOSGrid_SMRT_Matzler_exp.nc', 'w', format='NETCDF4')
+#w_nc_fid = Dataset('../../SourceData/WorkingFiles/GRISLI_Tb_SMOSGrid_'+BIOG.var.RTModel+'_'+BIOG.var.Perm+'_WithSnow_60deg.nc', 'w', format='NETCDF4')
+w_nc_fid = Dataset('../../SourceData/WorkingFiles/TbMod_and_Emissivity.nc', 'w', format='NETCDF4')
 w_nc_fid.description = "Tb computed from stationary run of GRISLI with "+ BIOG.var.RTModel
 w_nc_fid.createDimension("x", nc.dimensions['x'].size)
 w_nc_fid.createDimension("y", nc.dimensions['y'].size)
 w_nc_fid.createVariable('Tb','float64',nc.variables['H'].dimensions)
-w_nc_fid.variables['Tb'][:] = Tb
+w_nc_fid.variables['Tb'][:] = Tb1
+w_nc_fid.createVariable('Emissivity','float64',nc.variables['H'].dimensions)
+w_nc_fid.variables['Emissivity'][:] = Tb2-Tb1
 w_nc_fid.close()
 
 Stop=time.time()
