@@ -21,26 +21,23 @@ def GetTb(Tz, H, NbLayers, Freq, Angle, NbStreams, Perm, Model):
     depthfin=np.linspace(0,H,l)
     temp=np.interp(depthfin, depthini, temperature[::-1])[::-1]
     density=np.zeros(l)
-    radius=np.zeros(l)
+    radius=1e-4
     medium=list()
-    stickiness=0.1
-    soilp=None
-    dist=False#True
+    soilp=dmrtml.HUTRoughSoilParams(273)
 
-    #i=0
     for d in depthfin:
        i=np.where(depthfin==d)[0]
-       density[i]=1000.*(0.916-0.593*math.exp(-0.01859*d))#From Macelloni et al, 2016
-       radius[i]=1-0.9999*math.exp(-0.01859*d/1e4)#diminue l'écart avec 0.997 et /1.3
+       density[i]=922-595.3* math.exp(-0.01859*d)#1000.*(0.9171-0.593*math.exp(-0.01859*d))#From Macelloni et al, 2016
 
-       if density[i]>600:
-          medium.append('I')
-       else:
+       if density[i]<458.5:
           medium.append('S')
-       #i=i+1
+       elif density[i]<458.5 and density[i]<=900.:
+          medium.append('F')
+       else:
+          medium.append('I')
 
     if Model=="DMRT-ML":
-        res = dmrtml.dmrtml(Freq, NbStreams, thickness, density, radius, temp, medium=medium)#, permmodel="Tiuri")# tau=dmrtml.NONSTICKY, medium=medium,dist=dist,soilp=soilp)
+        res = dmrtml.dmrtml(Freq, NbStreams, thickness, density, radius, temp, medium=medium, soilp=soilp)
         return res.TbV(Angle)
 
     if Model=="SMRT":
@@ -55,8 +52,7 @@ def GetTb(Tz, H, NbLayers, Freq, Angle, NbStreams, Perm, Model):
                                  density=density,
                                  temperature=temp,
                                  radius=radius,
-                                 ice_permittivity_model=ice_permittivity_model)#,
-                                 #stickiness = stickiness)
+                                 ice_permittivity_model=ice_permittivity_model)
         # create the snowpack
         m = make_model("dmrt_qcacp_shortrange", "dort")
         radiometer = sensor.passive(Freq, Angle)
