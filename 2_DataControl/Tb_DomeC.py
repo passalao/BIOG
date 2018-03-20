@@ -6,7 +6,7 @@ import netCDF4, math
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 import numpy as np
-import sys
+import sys, time
 sys.path.insert(0, "/home/passalao/Documents/SMOS-FluxGeo/BIOG")
 import BIOG
 from numpy import loadtxt
@@ -26,12 +26,12 @@ H = GRISLI.variables['H']
 Zeta = GRISLI.variables['Zeta']
 Tz_gr = GRISLI.variables['T']
 
-#Dome C
+'''#Dome C
 print("         Dome C         ")
 print("Tb SMOS at Dome C:", Tb_Obs[0,65,167])
 Tz_gr_at_Point=Tz_gr[65,167,:]
 print("Ts:", Tz_gr_at_Point[0]+273.15)
-Data = loadtxt("../../SourceData/EDC_Temp_SlantCorrected.csv", comments="#", delimiter=",", unpack=False)
+Data = loadtxt("../../SourceData/Temperatures/EDC_Temp_SlantCorrected.csv", comments="#", delimiter=",", unpack=False)
 Tz_Obs=Data[:,1]-273.15
 Z=Data[:,0]
 Tb_mod = BIOG.fun.GetTb(Tz_Obs[::-1], Z[-1], BIOG.var.NbLayers, BIOG.var.Freq, BIOG.var.Angle, BIOG.var.NbStreams, BIOG.var.Perm, BIOG.var.RTModel)
@@ -39,6 +39,7 @@ print("Tb modèle avec Tz obs: ", Tb_mod)
 Tb_gr = BIOG.fun.GetTb(Tz_gr_at_Point, Z[-1], BIOG.var.NbLayers, BIOG.var.Freq, BIOG.var.Angle, BIOG.var.NbStreams, BIOG.var.Perm, BIOG.var.RTModel)
 print("Tb modèle avec Tz GRISLI: ", Tb_gr)
 print("Biais dû à GRISLI :", Tb_gr-Tb_mod)
+print("Biais dû à DMRT-ML :", Tb_mod-Tb_Obs[0,65,167])
 print(' ')
 
 #Vostok
@@ -52,55 +53,97 @@ print("Tb modèle avec Tz obs: ", Tb_mod)
 Tb_gr = BIOG.fun.GetTb(Tz_gr_at_Point, Z[0], BIOG.var.NbLayers, BIOG.var.Freq, BIOG.var.Angle, BIOG.var.NbStreams, BIOG.var.Perm, BIOG.var.RTModel)
 print("Tb modèle avec Tz GRISLI: ", Tb_gr)
 print("Biais dû à GRISLI :", Tb_gr-Tb_mod)
+print("Biais dû à DMRT-ML :", Tb_mod-Tb_Obs[0,86,165])
 print(' ')
 
 #Dome Fuji
 print("         Dome Fuji         ")
 print("Tb SMOS at Dome Fuji:", Tb_Obs[0,143,147])
 Tz_gr_at_Point=Tz_gr[143,147,:]
-Data = loadtxt("../../SourceData/DF_Temp.csv", comments="#", delimiter=" ", unpack=False)
+Data = loadtxt("../../SourceData/Temperatures/DF_Temp.csv", comments="#", delimiter=" ", unpack=False)
 Tz_Obs=Data[:,1]
 Z=Data[:,0]
-'''plt.plot(Tz_Obs,Z[-1]-Z, color='r')
-plt.plot(Tz_gr_at_Point, Zeta[143,147,:]*Z[-1], color='b')
-plt.show()'''
+#plt.plot(Tz_Obs,Z[-1]-Z, color='r')
+#plt.plot(Tz_gr_at_Point, Zeta[143,147,:]*Z[-1], color='b')
+#plt.show()
 Tb_mod = BIOG.fun.GetTb(Tz_Obs, Z[-1], BIOG.var.NbLayers, BIOG.var.Freq, BIOG.var.Angle, BIOG.var.NbStreams, BIOG.var.Perm, BIOG.var.RTModel)
 print("Tb modèle avec Tz obs: ", Tb_mod)
 Tb_gr = BIOG.fun.GetTb(Tz_gr_at_Point, Z[-1], BIOG.var.NbLayers, BIOG.var.Freq, BIOG.var.Angle, BIOG.var.NbStreams, BIOG.var.Perm, BIOG.var.RTModel)
 print("Tb modèle avec Tz GRISLI: ", Tb_gr)
 print("Biais dû à GRISLI :", Tb_gr-Tb_mod)
-print(' ')
+print("Biais dû à DMRT-ML :", Tb_mod-Tb_Obs[0,143,147])
+print(' ')'''
 
-#Byrd
-print("         Byrd         ")
-print("Tb SMOS at Byrd:", Tb_Obs[0,80,74])
-Tz_gr_at_Point=Tz_gr[80,74,:]
-Data = [[0,-28.3],[690,-22.]]
-Tz_Obs=[-28.3,-22]
-Z=[0,690]
-Tb_mod = BIOG.fun.GetTb(Tz_Obs, Z[-1], BIOG.var.NbLayers, BIOG.var.Freq, BIOG.var.Angle, BIOG.var.NbStreams, BIOG.var.Perm, BIOG.var.RTModel)
+print("         Law Dome         ")
+print("Tb SMOS at Law Dome:", Tb_Obs[0,62,206])
+Tz_gr_at_Point=Tz_gr[62,206,:]
+print("Ts:", Tz_gr_at_Point[0]+273.15)
+Data = loadtxt("../../SourceData/Temperatures/LawDome_Temp.csv", comments="#", delimiter=" ", unpack=False)
+Tz_Obs=Data[:,1]
+Z=Data[:,0]
+Z=Z[::-1]
+plt.plot(Tz_Obs,Z, color='r')
+plt.plot(Tz_gr_at_Point, Zeta[62,206,:]*Z[-1], color='b')
+plt.show()
+Tb_mod = BIOG.fun.GetTb(Tz_Obs[::-1], Z[-1], BIOG.var.NbLayers, BIOG.var.Freq, BIOG.var.Angle, BIOG.var.NbStreams, BIOG.var.Perm, BIOG.var.RTModel)
 print("Tb modèle avec Tz obs: ", Tb_mod)
 Tb_gr = BIOG.fun.GetTb(Tz_gr_at_Point, Z[-1], BIOG.var.NbLayers, BIOG.var.Freq, BIOG.var.Angle, BIOG.var.NbStreams, BIOG.var.Perm, BIOG.var.RTModel)
 print("Tb modèle avec Tz GRISLI: ", Tb_gr)
 print("Biais dû à GRISLI :", Tb_gr-Tb_mod)
+print("Biais dû à DMRT-ML :", Tb_mod-Tb_Obs[0,62,206])
 print(' ')
 
-#Fictitious point, for verification
+print("         T-UC         ")
+print("Tb SMOS at T-UC:", Tb_Obs[0,80,94])
+Tz_gr_at_Point=Tz_gr[80,94,:]
+print("Ts:", Tz_gr_at_Point[0]+273.15)
+Data = loadtxt("../../SourceData/Temperatures/T-UC-1993-14.txt", comments="#", delimiter=" ", unpack=False)
+Tz_Obs=Data[:,0]
+Z=Data[:,1]
+#plt.plot(Tz_Obs,Z, color='r')
+#plt.plot(Tz_gr_at_Point, Zeta[80,94,:]*Z[-1], color='b')
+#plt.show()
+Tb_mod = BIOG.fun.GetTb(Tz_Obs[::-1], Z[-1], BIOG.var.NbLayers, BIOG.var.Freq, BIOG.var.Angle, BIOG.var.NbStreams, BIOG.var.Perm, BIOG.var.RTModel)
+print("Tb modèle avec Tz obs: ", Tb_mod)
+Tb_gr = BIOG.fun.GetTb(Tz_gr_at_Point, Z[-1], BIOG.var.NbLayers, BIOG.var.Freq, BIOG.var.Angle, BIOG.var.NbStreams, BIOG.var.Perm, BIOG.var.RTModel)
+print("Tb modèle avec Tz GRISLI: ", Tb_gr)
+print("Biais dû à GRISLI :", Tb_gr-Tb_mod)
+print("Biais dû à DMRT-ML :", Tb_mod-Tb_Obs[0,80,94])
+print(' ')
+
+print("         T-AIS         ")
+print("Tb SMOS at T-AIS:", Tb_Obs[0,80,94])
+Tz_gr_at_Point=Tz_gr[79,93,:]
+print("Ts:", Tz_gr_at_Point[0]+273.15)
+Data = loadtxt("../../SourceData/Temperatures/T-UC-1993-14.txt", comments="#", delimiter=" ", unpack=False)
+Tz_Obs=Data[:,0]
+Z=Data[:,1]
+#plt.plot(Tz_Obs,Z, color='r')
+#plt.plot(Tz_gr_at_Point, Zeta[79,93,:]*Z[-1], color='b')
+#plt.show()
+Tb_mod = BIOG.fun.GetTb(Tz_Obs[::-1], Z[-1], BIOG.var.NbLayers, BIOG.var.Freq, BIOG.var.Angle, BIOG.var.NbStreams, BIOG.var.Perm, BIOG.var.RTModel)
+print("Tb modèle avec Tz obs: ", Tb_mod)
+Tb_gr = BIOG.fun.GetTb(Tz_gr_at_Point, Z[-1], BIOG.var.NbLayers, BIOG.var.Freq, BIOG.var.Angle, BIOG.var.NbStreams, BIOG.var.Perm, BIOG.var.RTModel)
+print("Tb modèle avec Tz GRISLI: ", Tb_gr)
+print("Biais dû à GRISLI :", Tb_gr-Tb_mod)
+print("Biais dû à DMRT-ML :", Tb_mod-Tb_Obs[0,79,93])
+print(' ')
+
+'''#Fictitious point, for verification
 print("         Fictitious point         ")
 T=220-273.15
 H=3000
 print("Tb SMOS :", T+273.15)
 Tz_gr_at_Point=T*np.ones(10)
-'''angles=np.linspace(59,61,21)
+angles=np.linspace(50,61,21)
 Tb_gr=np.zeros(21)
 for a in angles:
-    print(a)
-    Tb_gr[np.where(angles==a)[0]] = BIOG.fun.GetTb(Tz_gr_at_Point, H, 10, 1.4e9, 60.6, 6, "Tiuri", "DMRT-ML")
+    Tb_gr[np.where(angles==a)[0]] = BIOG.fun.GetTb(Tz_gr_at_Point, H, 10, 1.4e9, a, 64, "Tiuri", "DMRT-ML")
 plt.plot(angles, Tb_gr)
-plt.show()'''
+plt.show()
 #Tb_gr= BIOG.fun.GetTb(Tz_gr_at_Point, H, BIOG.var.NbLayers, BIOG.var.Freq, 60.6, 256, BIOG.var.Perm, BIOG.var.RTModel)
 #print("Tb modèle avec Tz GRISLI (beware of density): ", Tb_gr)
-print(' ')
+print(' ')'''
 
 
 '''# Geographic plot

@@ -34,7 +34,7 @@ T = GRISLI.variables['T']
 Ts=T[:,:,0]
 
 #Import Tb data out of GRISLI
-Model1 = netCDF4.Dataset('../../SourceData/WorkingFiles/GRISLI_Tb_SMOSGrid_'+BIOG.var.RTModel+'_'+'Matzler'+'.nc')
+Model1 = netCDF4.Dataset('../../SourceData/WorkingFiles/GRISLI_Tb_SMOSGrid_'+BIOG.var.RTModel+'_'+BIOG.var.Perm+'.nc')
 ny_Mod1 = Model1.dimensions['y'].size
 nx_Mod1 = Model1.dimensions['x'].size
 Tb_Mod1 = Model1.variables['Tb']

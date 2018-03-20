@@ -36,6 +36,11 @@ def GetTb(Tz, H, NbLayers, Freq, Angle, NbStreams, Perm, Model):
        else:
           medium.append('I')
 
+    '''i=0
+    for d in density[0:np.size(density)-2]:
+       density[i]=(density[i+1]+density[i])/2
+       i=i+1'''
+
     if Model=="DMRT-ML":
         res = dmrtml.dmrtml(Freq, NbStreams, thickness, density, radius, temp, medium=medium, soilp=soilp)
         return res.TbV(Angle)

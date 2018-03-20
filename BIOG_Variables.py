@@ -13,9 +13,9 @@ NbAtt=10
 #For radiative transfer:
 RTModel="DMRT-ML" # SMRT or DMRT-ML
 Perm="Tiuri"# Matzler or Tiuri for SMRT
-NbLayers=5
+NbLayers=30
 Freq=1.4e9 #[Hz] Sensor frequency
-NbStreams=64#
+NbStreams=16#
 Angle=52.5#[deg] View angle of the sensor
 Subsample=10# To go faster for tests: 1 point every Subsample points
 

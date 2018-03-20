@@ -16,17 +16,17 @@ import BIOG
 
 # Import Tb data computed from the model
 #Model1 = netCDF4.Dataset('../../SourceData/WorkingFiles/GRISLI_Tb_SMOSGrid_SMRT_Matzler_exp.nc')
-Model1 = netCDF4.Dataset('../../SourceData/WorkingFiles/GRISLI_Tb_SMOSGrid_'+BIOG.var.RTModel+'_'+BIOG.var.Perm+'.nc')
+Model1 = netCDF4.Dataset('../../SourceData/WorkingFiles/GRISLI_Tb_SMOSGrid_'+BIOG.var.RTModel+'_'+BIOG.var.Perm+'_30couches.nc')
 ny_Mod1 = Model1.dimensions['y'].size
 nx_Mod1 = Model1.dimensions['x'].size
 Tb_Mod1 = Model1.variables['Tb']
 
-Model1 = netCDF4.Dataset('../../SourceData/WorkingFiles/GRISLI_Tb_SMOSGrid_'+BIOG.var.RTModel+'_'+BIOG.var.Perm+'_firn.nc')
-Tb_Mod2 = Model1.variables['Tb']
+Model2 = netCDF4.Dataset('../../SourceData/WorkingFiles/GRISLI_Tb_SMOSGrid_'+BIOG.var.RTModel+'_'+BIOG.var.Perm+'_300couches.nc')
+Tb_Mod2 = Model2.variables['Tb']
 
 #Import emissivity data
-Emissivity = netCDF4.Dataset('../../SourceData/WorkingFiles/TbMod_and_Emissivity.nc')
-Em = Emissivity.variables['Emissivity']
+#Emissivity = netCDF4.Dataset('../../SourceData/WorkingFiles/TbMod_and_Emissivity.nc')
+#Em = Emissivity.variables['Emissivity']
 
 # Import SMOS data
 Obs = netCDF4.Dataset('../../SourceData/SMOS/SMOSL3_StereoPolar_AnnualMeanSansNDJ_TbV_52.5deg_xy.nc')
@@ -51,7 +51,7 @@ GapToPMP=Tground-PMP+273.15
 
 Tb_Obs=np.array(Tb_Obs)
 Tb_Mod1=np.array(Tb_Mod1)
-Em=np.array(Em)
+#Em=np.array(Em)
 #Tb_Mod1=Em*Tb_Mod1
 
 Tb_Mod2=np.array(Tb_Mod2)
@@ -59,7 +59,7 @@ Acc=np.array(Acc)
 Ts=np.array(Ts)
 Tb_Mod1=Tb_Mod1*(4-np.array(Mask))/3
 Tb_Mod2=Tb_Mod2*(4-np.array(Mask))/3
-Em=Em*(4-np.array(Mask))/3
+#Em=Em*(4-np.array(Mask))/3
 Tb_Obs=Tb_Obs*(4-np.array(Mask))/3
 GapToPMP=GapToPMP*(4-np.array(Mask))/3
 Error=Tb_Mod1-Tb_Obs[0]
@@ -131,8 +131,8 @@ for a in Acc:
 
 # scatterplot
 #myplot=plt.scatter(Tb_Mod1, Tb_Mod2, c="Red", s=5, label="Mätzler")
-myplot=plt.scatter(Tb_Obs, Tb_Mod2, c="Red", s=0.01)
-#myplot=plt.scatter(Tb_Obs, Tb_Mod2, c="Darkgreen", s=1)
+myplot=plt.scatter(Tb_Obs, Tb_Mod1, c="Red", s=10)
+myplot=plt.scatter(Tb_Obs, Tb_Mod2, c="Darkgreen", s=10)
 #myplot=plt.scatter(Tb_Obs, Tb_Mod1-Tb_Mod2, s=0.01)#, label="Tiuri")
 #cbar=plt.colorbar()
 #cbar.set_label('Geothermal flux (mW/m2)', rotation=270, labelpad=15)
