@@ -112,7 +112,7 @@ print("Biais dû à DMRT-ML :", Tb_mod-Tb_Obs[0,80,94])
 print(' ')
 
 print("         T-AIS         ")
-print("Tb SMOS at T-AIS:", Tb_Obs[0,80,94])
+print("Tb SMOS at T-AIS:", Tb_Obs[0,79,93])
 Tz_gr_at_Point=Tz_gr[79,93,:]
 print("Ts:", Tz_gr_at_Point[0]+273.15)
 Data = loadtxt("../../SourceData/Temperatures/T-UC-1993-14.txt", comments="#", delimiter=" ", unpack=False)
