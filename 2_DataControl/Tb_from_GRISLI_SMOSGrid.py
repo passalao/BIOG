@@ -50,7 +50,7 @@ plt.ylim(200,270)
 plt.show()'''
 
 # Export of the enriched GRISLI dataset for KERAS
-w_nc_fid = Dataset('../../SourceData/WorkingFiles/GRISLI_Tb_SMOSGrid_'+BIOG.var.RTModel+'_'+BIOG.var.Perm+'_30couches.nc', 'w', format='NETCDF4')
+w_nc_fid = Dataset('../../SourceData/WorkingFiles/GRISLI_Tb_SMOSGrid_'+BIOG.var.RTModel+'_'+BIOG.var.Perm+'_1000layers.nc', 'w', format='NETCDF4')
 #w_nc_fid = Dataset('../../SourceData/WorkingFiles/TbMod_and_Emissivity_test.nc', 'w', format='NETCDF4')
 w_nc_fid.description = "Tb computed from stationary run of GRISLI with "+ BIOG.var.RTModel
 w_nc_fid.createDimension("x", nc.dimensions['x'].size)

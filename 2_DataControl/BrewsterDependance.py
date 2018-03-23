@@ -14,8 +14,8 @@ H=3000.
 
 angles=np.linspace(40,65,21)
 Tb_gr=np.zeros((21,2))
-NbLayers=[10]#,30, 100, 300]
-NbStreams=[8,16,32,64]#,128]
+NbLayers=[10]#[10]#,30, 100, 300]
+NbStreams=[64]
 
 '''for n in NbLayers:
     Tz_gr_at_Point = np.zeros(n)
@@ -42,21 +42,28 @@ for s in NbStreams:
         print("n=", n)
         for a in angles:
             depth = np.linspace(0, H, n)
-            for d in depth:
+            '''for d in depth:
                 i = np.where(depth == d)[0]
-                Tz_gr_at_Point[i] = -2 - T[0] * math.exp(-(H - d) / (H / 6)) + T[0]
-            # plt.plot(Tz_gr_at_Point,depth)
-            # plt.show()
-            # Tz_gr_at_Point = np.linspace(T[0], T[0]+20, n)
+                Tz_gr_at_Point[i] = -2 - T[0] * math.exp(-(H - d) / (H / 6)) + T[0]'''
+            Tz_gr_at_Point = np.linspace(T[0], T[0], n)
+            '''plt.plot(Tz_gr_at_Point,depth)
+            plt.show()'''
+            Tbatmodown = 0
             Tb_gr[np.where(angles == a)[0], 0] = BIOG.fun.GetTb(Tz_gr_at_Point, H, n, BIOG.var.Freq, a,
-                                                                s, "Tiuri", "DMRT-ML")
-            for d in depth:
+                                                                s, "Matzler", "DMRT-ML",Tbatmodown)
+            '''for d in depth:
                 i = np.where(depth == d)[0]
-                Tz_gr_at_Point[i] = -2 - T[1] * math.exp(-(H - d) / (H / 6)) + T[1]
-            # Tz_gr_at_Point = np.linspace(T[1], T[1]+20, n)
+                Tz_gr_at_Point[i] = -2 - T[1] * math.exp(-(H - d) / (H / 6)) + T[1]'''
+
+            Tbatmodown=1
             Tb_gr[np.where(angles == a)[0], 1] = BIOG.fun.GetTb(Tz_gr_at_Point, H, n, BIOG.var.Freq, a,
-                                                                s, "Tiuri", "DMRT-ML")
-        plt.plot(angles, Tb_gr[:,1]-Tb_gr[:,0], label=str(s)+' streams')
+                                                                s, "Matzler", "DMRT-ML",Tbatmodown)
+
+            '''Tz_gr_at_Point = np.linspace(T[1], T[1], n)
+            Tb_gr[np.where(angles == a)[0], 1] = BIOG.fun.GetTb(Tz_gr_at_Point, H, n, BIOG.var.Freq, a,
+                                                                s, "Matzler", "DMRT-ML",Tbatmodown)'''
+
+        plt.plot(angles, 1-(Tb_gr[:,1]-Tb_gr[:,0]), label=str(s)+' streams')
 
 #plt.plot(angles, Tb_gr[:,:])
 #plt.plot(angles, Tb_gr[:,1]-Tb_gr[:,0])

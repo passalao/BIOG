@@ -27,7 +27,7 @@ Bmelt = nc_fid.variables['BMELT'][:]  # extract/copy the data
 PhiG = nc_fid.variables['PhiG'][:]  # extract/copy the data
 
 #Get the surface temperature
-Ts=T[0,:,:]
+Ts=T[:,:,0]
 
 #Get the Geothermal flux from Shapiro dataset
 #nc_gf = '../../SourceData/GRISLI/ghfsr_15km.grd'
@@ -42,33 +42,32 @@ lx=np.shape(PhiG)[1]
 ly=np.shape(PhiG)[0]
 
 #Compute Z, elevation above bedrock, and Zeta, reduced height
-Z=np.zeros((21,ly,lx))
-Zeta=np.zeros((21,ly,lx))
+Z=np.zeros((ly,lx,21))
+Zeta=np.zeros((ly,lx,21))
 for i in np.arange(0,20):
-    Z[i,:,:]=0.05*(20-i)*H[:,:]
-    Zeta[i,:,:]=0.05*(20-i)
+    Z[:,:,i]=0.05*(20-i)*H[:,:]
+    Zeta[:,:,i]=0.05*(20-i)
 
 #Compute hor. divergence, and reshape
-GradUx=np.zeros((21,ly,lx))
-GradUy=np.zeros((21,ly,lx))
-LogUh=np.zeros((21,ly,lx))
+GradUx=np.zeros((ly,lx,21))
+GradUy=np.zeros((ly,lx,21))
+LogUh=np.zeros((ly,lx,21))
 
 j=0  #j for Y coordinates, i for X coordinates
 for line in Uxbar[:]:
     i=0
     for node in line:
         k=0
-        print(np.shape(Ux))
-        for u in Ux[:,j,i]:
+        for u in Ux[j,i,:]:
             #print(k)
-            LogUh[k,j,i] = math.log((Ux[k,j,i] ** 2 + Uy[k,j,i] ** 2) ** 0.5 + 1e-6)
+            LogUh[j,i,k] = math.log((Ux[j,i,k] ** 2 + Uy[j,i,k] ** 2) ** 0.5 + 1e-6)
             k=k+1
 
         if i!=0 and i!=lx-1 and j!=0 and j!=ly-1:
             k=0
-            for z in GradUx[:,0,0]:
-                GradUx[k,j,i]=(Ux[k,j,i+1] - Ux[k,j,i-1])/50000 # cell width of 15km
-                GradUy[k,j,i]=(Uy[k,j+1,i] - Uy[k,j-1,i])/50000
+            for z in GradUx[0,0,:]:
+                GradUx[j,i,k]=(Ux[j,i+1,k] - Ux[j,i-1,k])/50000 # cell width of 15km
+                GradUy[j,i,k]=(Uy[j+1,i,k] - Uy[j-1,i,k])/50000
                 k=k+1
         i=i+1
     j=j+1

@@ -16,12 +16,12 @@ import BIOG
 
 # Import Tb data computed from the model
 #Model1 = netCDF4.Dataset('../../SourceData/WorkingFiles/GRISLI_Tb_SMOSGrid_SMRT_Matzler_exp.nc')
-Model1 = netCDF4.Dataset('../../SourceData/WorkingFiles/GRISLI_Tb_SMOSGrid_'+BIOG.var.RTModel+'_'+BIOG.var.Perm+'_30couches.nc')
+Model1 = netCDF4.Dataset('../../SourceData/WorkingFiles/GRISLI_Tb_SMOSGrid_'+BIOG.var.RTModel+'_'+BIOG.var.Perm+'.nc')
 ny_Mod1 = Model1.dimensions['y'].size
 nx_Mod1 = Model1.dimensions['x'].size
 Tb_Mod1 = Model1.variables['Tb']
 
-Model2 = netCDF4.Dataset('../../SourceData/WorkingFiles/GRISLI_Tb_SMOSGrid_'+BIOG.var.RTModel+'_'+BIOG.var.Perm+'_300couches.nc')
+Model2 = netCDF4.Dataset('../../SourceData/WorkingFiles/GRISLI_Tb_SMOSGrid_'+BIOG.var.RTModel+'_'+'Tiuri'+'.nc')
 Tb_Mod2 = Model2.variables['Tb']
 
 #Import emissivity data
@@ -128,11 +128,10 @@ for a in Acc:
         Acc4Plot[i]=a
     i=i+1'''
 
-
 # scatterplot
 #myplot=plt.scatter(Tb_Mod1, Tb_Mod2, c="Red", s=5, label="Mätzler")
-myplot=plt.scatter(Tb_Obs, Tb_Mod1, c="Red", s=10)
-myplot=plt.scatter(Tb_Obs, Tb_Mod2, c="Darkgreen", s=10)
+myplot=plt.scatter(Tb_Obs, Tb_Mod1, c="Red", s=0.01)
+#myplot=plt.scatter(Tb_Obs, Tb_Mod2, c="Darkgreen", s=0.01)
 #myplot=plt.scatter(Tb_Obs, Tb_Mod1-Tb_Mod2, s=0.01)#, label="Tiuri")
 #cbar=plt.colorbar()
 #cbar.set_label('Geothermal flux (mW/m2)', rotation=270, labelpad=15)

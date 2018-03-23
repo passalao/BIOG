@@ -13,3 +13,8 @@ class Trace:
 class StoreArray:
     def __init__(self, nbx=1, nby=1, nbvar=1):
         self.Data=np.zeros((nbx, nby, nbvar));
+
+class Site:
+    def __init__(self, Names=[], Coords=[[],[]]):
+        self.Names=Names#[]*nbsites;
+        self.Coords=Coords#np.zeros((nbsites,2))

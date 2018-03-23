@@ -12,7 +12,7 @@ import time, math
 import dmrtml
 from pylab import *
 
-def GetTb(Tz, H, NbLayers, Freq, Angle, NbStreams, Perm, Model):
+def GetTb(Tz, H, NbLayers, Freq, Angle, NbStreams, Perm, Model, Tbatmo):
     l = NbLayers  # number of layers
     nbinputlayers=np.size(Tz)
     temperature = np.transpose(Tz)+273.15
@@ -42,7 +42,7 @@ def GetTb(Tz, H, NbLayers, Freq, Angle, NbStreams, Perm, Model):
        i=i+1'''
 
     if Model=="DMRT-ML":
-        res = dmrtml.dmrtml(Freq, NbStreams, thickness, density, radius, temp, medium=medium, soilp=soilp)
+        res = dmrtml.dmrtml(Freq, NbStreams, thickness, density, radius, temp, medium=medium, soilp=soilp, tbatmodown=Tbatmo)
         return res.TbV(Angle)
 
     if Model=="SMRT":
