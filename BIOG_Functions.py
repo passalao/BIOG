@@ -4,13 +4,40 @@
 # SMRT model for Tb computation
 import sys
 sys.path.insert(0, "/home/passalao/smrt")
-sys.path.insert(0, "/home/passalao/dmrtml")
+sys.path.insert(0, "/home/passalao/dmrtml_MLL")
+sys.path.insert(0, "/home/passalao/Documents/SMOS-FluxGeo/BIOG")
+import BIOG
 from smrt import make_snowpack, make_model, sensor
 from smrt.permittivity.ice import ice_permittivity_matzler87, ice_permittivity_tiuri84
 import numpy as np
 import time, math
-import dmrtml
+import dmrtml_bis as dmrtml
 from pylab import *
+
+
+def Permittivity(Model,T, D, Freq):
+    e_ice=np.zeros((2,np.size(T)))
+
+    if Model=="Tiuri":
+        e_ice[0,:]=1+1.7*D/1000+0.7*(D/1000)**2
+        e_ice[1,:]=1.5871e6*(0.52*D/1000+0.62*(D/1000)**2)*(1/Freq+1.23e-14*Freq**0.5)
+        expT=exp(0.036*(T-273.15))
+        e_ice[1,:]=e_ice[1,:]*expT
+
+    if Model=="Matzler":
+        e_ice[0,:] = 3.1884 + 9.1e-4 * (T - 273.0)
+        theta = 300.0 / T - 1.0
+        alpha = (0.00504 + 0.0062 * theta) * exp(-22.1 * theta)
+        B1 = 0.0207
+        B2 = 1.16e-11
+        b = 335
+        deltabeta = exp(-9.963 + 0.0372 * (T - 273.16))
+        betam = (B1 / T) * (exp(b / T) / ((exp(b / T) - 1) ** 2)) + B2 * (Freq/1e9) ** 2
+        beta = betam + deltabeta
+        e_ice[1, :] = alpha /(Freq/1e9) + beta * (Freq/1e9)
+
+    return e_ice
+
 
 def GetTb(Tz, H, NbLayers, Freq, Angle, NbStreams, Perm, Model, Tbatmo):
     l = NbLayers  # number of layers
@@ -27,7 +54,7 @@ def GetTb(Tz, H, NbLayers, Freq, Angle, NbStreams, Perm, Model, Tbatmo):
 
     for d in depthfin:
        i=np.where(depthfin==d)[0]
-       density[i]=922-595.3* math.exp(-0.01859*d)#1000.*(0.9171-0.593*math.exp(-0.01859*d))#From Macelloni et al, 2016
+       density[i]=922-595.3* math.exp(-0.01859*d)
 
        if density[i]<458.5:
           medium.append('S')
@@ -36,13 +63,11 @@ def GetTb(Tz, H, NbLayers, Freq, Angle, NbStreams, Perm, Model, Tbatmo):
        else:
           medium.append('I')
 
-    '''i=0
-    for d in density[0:np.size(density)-2]:
-       density[i]=(density[i+1]+density[i])/2
-       i=i+1'''
+    # Compute the permittivity for the whole profile
+    e_ice = Permittivity(Perm, temp, density, Freq)
 
     if Model=="DMRT-ML":
-        res = dmrtml.dmrtml(Freq, NbStreams, thickness, density, radius, temp, medium=medium, soilp=soilp, tbatmodown=Tbatmo)
+        res = dmrtml.dmrtml_bis(Freq, NbStreams, thickness, density, radius, temp, medium=medium, soilp=soilp, tbatmodown=Tbatmo,eps_ice=(e_ice[0,:], e_ice[1,:]))
         return res.TbV(Angle)
 
     if Model=="SMRT":
