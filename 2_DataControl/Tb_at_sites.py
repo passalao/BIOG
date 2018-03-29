@@ -33,9 +33,9 @@ H = GRISLI.variables['H']
 Zeta = GRISLI.variables['Zeta']
 Tz_gr = GRISLI.variables['T']
 
-Sites=['DomeC', 'Vostok', 'DomeFuji', 'SipleDome','Byrd','LawDome', 'T-UC', 'T-AIS']
-Lon=[123.3952,106.7114,39.7222,-149.2426,-119.31,112.8067,-138.372,-138.946]
-Lat=[-75.1017,-78.4719,-77.3088,-81.6620,-80.01,-66.7391,-83.679,-83.4619]
+Sites=['DomeC', 'Vostok', 'DomeFuji', 'EDML','SipleDome','Byrd','LawDome']#, 'T-UC', 'T-AIS']
+Lon=[123.3952,106.7114,39.7222,0.05161,-149.2426,-119.31,112.8067]#,-138.372,-138.946]
+Lat=[-75.1017,-78.4719,-77.3088,-75.00,-81.6620,-80.01,-66.7391]#,-83.679,-83.4619]
 wgs84 = pyproj.Proj("+init=EPSG:4326")
 StereoPol = pyproj.Proj(init="EPSG:6932")  #
 Xs, Ys = pyproj.transform(wgs84, StereoPol, Lon, Lat)
@@ -58,6 +58,10 @@ f.write('Site Lon Lat Thickness TbSMOS Ts_LocalObs Tb_DMRT-ML Error_Obs\n')
 Error=np.zeros((np.shape(Sites)[0],2))
 Height=np.zeros(np.shape(Sites))
 Ts=np.zeros(np.shape(Sites))
+Tb=np.zeros(np.shape(Sites))
+DeltaTTiuri=np.zeros(np.shape(Sites))
+DeltaTMatzler=np.zeros(np.shape(Sites))
+DeltaTFirn=np.zeros(np.shape(Sites))
 
 Perm=['Tiuri', 'Matzler']
 k=0
@@ -79,7 +83,14 @@ for site in Sites:
     Error[k]=Tb_modobs-Tb_Obs[0,j,i]
     Height[k]=depth[-1]
     Ts[k]=Tz_Obs[0]
+    Tb[k]=Tb_Obs[0, j, i]
 
+    # Compute T at d=466 and d=1750
+    temp=np.interp([0, 100, 200, 300, 400, 466, 500, 600, 700, 800, 900, 1000, 1100, 1200, 1300, 1400, 1500, 1600, 1700, 1750,
+         1800], depth, Tz_Obs)
+    DeltaTTiuri[k]=temp[5]-Ts[k]
+    DeltaTMatzler[k] = temp[19] - Ts[k]
+    DeltaTFirn[k] = temp[1] - Ts[k]
     '''OutData[k,0]=Lon[k]
     OutData[k,1] = Lat[k]
     OutData[k,2] = depth[-1]
@@ -95,35 +106,73 @@ for site in Sites:
 
 
 #plt.scatter(Error,Height)
-
 cmap = plt.get_cmap('viridis')
-plt.scatter(Error[:,0],Error[:,1], c=Height, cmap=cmap)
+
+'''plt.scatter(Error[:,0],Error[:,1], c=Height, cmap=cmap)
 [plt.text(et-1,em-1,site) for et,em,site in zip(Error[:,0], Error[:,1],Sites)]
-plt.grid()
 cbar=plt.colorbar()
 cbar.set_label('Ice thickness (m)', rotation=270, labelpad=15)
 plt.xlabel("Error with Tiuri")
 plt.ylabel("Error with Mätzler")
 plt.xlim(-2,18)
-plt.ylim(-2,18)
+plt.ylim(-2,18)'''
+#plt.scatter(Error[:,0],DeltaTFirn, c=Height, cmap=cmap)
+#[plt.text(et-1,dt-0.1,site) for et,dt,site in zip(Error[:,0], DeltaTFirn,Sites)]
+#plt.scatter(Error[:,1],DeltaTMatzler, c=Height, cmap=cmap)
+#[plt.text(et-1,dt-0.5,site) for et,dt,site in zip(Error[:,1], DeltaTMatzler,Sites)]
+#plt.scatter(Error[:,0],DeltaTTiuri, c=Height, cmap=cmap)
+#[plt.text(et-1,dt-0.5,site) for et,dt,site in zip(Error[:,0], DeltaTTiuri,Sites)]
+plt.scatter(Ts+273.15,Tb, c=Height, cmap=cmap)
+[plt.text(ts-1+273.15,tb-5,site) for ts,tb,site in zip(Ts,Tb,Sites)]
+cbar=plt.colorbar()
+cbar.set_label('Ice thickness (m)', rotation=270, labelpad=15)
+#plt.xlabel("Error with Tiuri")
+#plt.ylabel("T(466 m)-Ts")
+#plt.xlabel("Error with Mätzler")
+#plt.ylabel("T(1750 m)-Ts")
+#plt.xlabel("Error with Tiuri")
+#plt.ylabel("T(100 m)-Ts")
+plt.xlabel("Ts (K)")
+plt.ylabel("Tb SMOS (K)")
+
+#plt.xlim(-2,15)
+#plt.ylim(-2,15)
+plt.grid(which='both')
+#plt.axis("equal")
+#plt.autoscale(False)
+#plt.gca().autoscale_view()
+plt.plot([200,260],[200,260],'-', c='r', lw=0.5)
+#plt.plot([-5,18],[-5,18],'-', c='r', lw=0.5)
 plt.show()
 
-#Normalization
-Error=(Error-min(Error))/(max(Error)-min(Error))
+'''#Normalization
+Error[:,1]=(Error[:,1]-min(Error[:,1]))/(max(Error[:,1])-min(Error[:,1]))
+Error[:,0]=(Error[:,0]-min(Error[:,0]))/(max(Error[:,0])-min(Error[:,0]))'''
 
 cmap = plt.get_cmap('inferno')
-colors = [cmap(i) for i in Error]
+colors = [cmap(i) for i in Error[:,1]]
 
 #Plot
 i=0
 for site in Sites:
-    color=colors[i]
+    #color=colors[i]
     Data = loadtxt("../../SourceData/Temperatures/"+str(site)+".csv", comments="#", delimiter=",",unpack=False)
     Tz_Obs = Data[:, 1]
     depth = Data[:, 0]
-    plt.plot(Tz_Obs, depth, color=color)
+
+
+    plt.plot(Tz_Obs, depth, label=site)# color=color)
+    plt.legend()
+    plt.plot([-60,0],[466,466],'--', c='b', lw=0.5)
+    plt.plot([-60,0],[1750,1750],'--',c='r', lw=0.5)
     i=i+1
 
+#cbar = plt.colorbar()
+#cbar.set_label('Error (K)', rotation=270, labelpad=15)
+plt.text(-10,446,"Tiuri 90%")
+plt.text(-10,1730,"Mätzler 90%")
+plt.xlabel("Ice temperature (K)")
+plt.ylabel("Depth (m)")
 plt.gca().invert_yaxis()
 plt.grid()
 plt.show()
