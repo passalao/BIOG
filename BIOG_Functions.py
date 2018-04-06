@@ -36,6 +36,29 @@ def Permittivity(Model,T, D, Freq):
         beta = betam + deltabeta
         e_ice[1, :] = alpha /(Freq/1e9) + beta * (Freq/1e9)
 
+    if Model!="Tiuri" and Model!="Matzler":
+        e_iceT = np.zeros((2, np.size(T)))
+        e_iceM = np.zeros((2, np.size(T)))
+
+        e_iceT[0,:]=1+1.7*D/1000+0.7*(D/1000)**2
+        e_iceT[1,:]=1.5871e6*(0.52*D/1000+0.62*(D/1000)**2)*(1/Freq+1.23e-14*Freq**0.5)
+        expT=exp(0.036*(T-273.15))
+        e_iceT[1,:]=e_iceT[1,:]*expT
+
+        e_iceM[0,:] = 3.1884 + 9.1e-4 * (T - 273.0)
+        theta = 300.0 / T - 1.0
+        alpha = (0.00504 + 0.0062 * theta) * exp(-22.1 * theta)
+        B1 = 0.0207
+        B2 = 1.16e-11
+        b = 335
+        deltabeta = exp(-9.963 + 0.0372 * (T - 273.16))
+        betam = (B1 / T) * (exp(b / T) / ((exp(b / T) - 1) ** 2)) + B2 * (Freq/1e9) ** 2
+        beta = betam + deltabeta
+        e_iceM[1, :] = alpha /(Freq/1e9) + beta * (Freq/1e9)
+
+        e_ice[0,:]=e_iceT[0,:]*Model+e_iceM[0,:]*(1-Model)
+        e_ice[1,:]=e_iceT[1,:]*Model+e_iceM[1,:]*(1-Model)
+
     return e_ice
 
 
@@ -54,7 +77,7 @@ def GetTb(Tz, H, NbLayers, Freq, Angle, NbStreams, Perm, Model, Tbatmo):
 
     for d in depthfin:
        i=np.where(depthfin==d)[0]
-       density[i]=922-595.3* math.exp(-0.01859*d)
+       density[i]=921.9-595.3* math.exp(-0.01859*d)
 
        if density[i]<458.5:
           medium.append('S')

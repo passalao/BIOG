@@ -81,7 +81,7 @@ Yout = dsout.createVariable('y', 'f4', ('y',))
 Yout.standard_name = 'y'
 Yout.units = 'm'
 Yout.axis = "Y"
-Yout[:] = Y[:,0]
+Yout[:] = Y[:,0] #TODO décaler d'un pixel ici ?
 
 Xout = dsout.createDimension('x', cols)
 Xout = dsout.createVariable('x', 'f4', ('x',))

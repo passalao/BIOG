@@ -80,6 +80,7 @@ for site in Sites:
 
     #Tb_modgr = BIOG.fun.GetTb(Tz_gr_at_Point, Z[-1], BIOG.var.NbLayers, BIOG.var.Freq, BIOG.var.Angle, BIOG.var.NbStreams,
     #                       BIOG.var.Perm, BIOG.var.RTModel,0)
+    #Tb_modobs=[t*0.98 for t in Tb_modobs]
     Error[k]=Tb_modobs-Tb_Obs[0,j,i]
     Height[k]=depth[-1]
     Ts[k]=Tz_Obs[0]
@@ -104,7 +105,6 @@ for site in Sites:
     f.write("\n")'''
     k=k+1
 
-
 #plt.scatter(Error,Height)
 cmap = plt.get_cmap('viridis')
 
@@ -116,14 +116,14 @@ plt.xlabel("Error with Tiuri")
 plt.ylabel("Error with Mätzler")
 plt.xlim(-2,18)
 plt.ylim(-2,18)'''
-#plt.scatter(Error[:,0],DeltaTFirn, c=Height, cmap=cmap)
+'''#plt.scatter(Error[:,0],DeltaTFirn, c=Height, cmap=cmap)
 #[plt.text(et-1,dt-0.1,site) for et,dt,site in zip(Error[:,0], DeltaTFirn,Sites)]
 #plt.scatter(Error[:,1],DeltaTMatzler, c=Height, cmap=cmap)
 #[plt.text(et-1,dt-0.5,site) for et,dt,site in zip(Error[:,1], DeltaTMatzler,Sites)]
 #plt.scatter(Error[:,0],DeltaTTiuri, c=Height, cmap=cmap)
-#[plt.text(et-1,dt-0.5,site) for et,dt,site in zip(Error[:,0], DeltaTTiuri,Sites)]
+#[plt.text(et-1,dt-0.5,site) for et,dt,site in zip(Error[:,0], DeltaTTiuri,Sites)]'''
 plt.scatter(Ts+273.15,Tb, c=Height, cmap=cmap)
-[plt.text(ts-1+273.15,tb-5,site) for ts,tb,site in zip(Ts,Tb,Sites)]
+[plt.text(ts-1+273.15,tb-3,site) for ts,tb,site in zip(Ts,Tb,Sites)]
 cbar=plt.colorbar()
 cbar.set_label('Ice thickness (m)', rotation=270, labelpad=15)
 #plt.xlabel("Error with Tiuri")
@@ -138,11 +138,18 @@ plt.ylabel("Tb SMOS (K)")
 #plt.xlim(-2,15)
 #plt.ylim(-2,15)
 plt.grid(which='both')
-#plt.axis("equal")
+plt.axis("equal")
 #plt.autoscale(False)
 #plt.gca().autoscale_view()
-plt.plot([200,260],[200,260],'-', c='r', lw=0.5)
+plt.xlim(210,260)
+plt.ylim(210,260)
+plt.plot([200,270],[200,270],'-', c='r', lw=0.5)
 #plt.plot([-5,18],[-5,18],'-', c='r', lw=0.5)
+'''from sklearn import linear_model
+regr = linear_model.LinearRegression()
+regr.fit(Ts[:,np.newaxis], Tb)
+Ts_test = np.linspace(np.min(Ts), np.max(Ts), 100)
+plt.plot(Ts_test+273.15, regr.predict(Ts_test[:,np.newaxis]), color='blue', linewidth=1)'''
 plt.show()
 
 '''#Normalization
@@ -159,20 +166,15 @@ for site in Sites:
     Data = loadtxt("../../SourceData/Temperatures/"+str(site)+".csv", comments="#", delimiter=",",unpack=False)
     Tz_Obs = Data[:, 1]
     depth = Data[:, 0]
-
-
     plt.plot(Tz_Obs, depth, label=site)# color=color)
     plt.legend()
-    plt.plot([-60,0],[466,466],'--', c='b', lw=0.5)
-    plt.plot([-60,0],[1750,1750],'--',c='r', lw=0.5)
     i=i+1
 
 #cbar = plt.colorbar()
 #cbar.set_label('Error (K)', rotation=270, labelpad=15)
-plt.text(-10,446,"Tiuri 90%")
-plt.text(-10,1730,"Mätzler 90%")
 plt.xlabel("Ice temperature (K)")
 plt.ylabel("Depth (m)")
 plt.gca().invert_yaxis()
 plt.grid()
 plt.show()
+
