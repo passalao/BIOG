@@ -12,7 +12,7 @@ NbAtt=10
 
 #For radiative transfer:
 RTModel="DMRT-ML" # SMRT or DMRT-ML
-Perm="Tiuri"# Matzler,Tiuri or percentage of Tiuri
+Perm="Tiuri"#Tiuri"# Matzler,Tiuri or percentage of Tiuri
 NbLayers=100
 Freq=1.4e9 #[Hz] Sensor frequency
 NbStreams=16#

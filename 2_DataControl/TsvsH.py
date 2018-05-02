@@ -9,7 +9,7 @@ sys.path.insert(0, "/home/passalao/Documents/SMOS-FluxGeo/BIOG")
 import BIOG
 from io import StringIO
 
-Transect="DC2McM"#DC2Triangle" #DC2McM, DC2VL or DC2Triangle
+Transect="DC2Triangle"#DC2Triangle" #DC2McM, DC2VL or DC2Triangle
 
 # Import SMOS data
 print("Load data")
@@ -30,7 +30,7 @@ Ypix=(Ys-Y[-1][-1])//Ly+1
 Ts=np.zeros(np.shape(TransCoord)[0])
 
 # Import temperature data
-GRISLI = netCDF4.Dataset('../../SourceData/WorkingFiles/GRISLIMappedonSMOS.nc')
+GRISLI = netCDF4.Dataset('../../SourceData/WorkingFiles_GRISLIini/GRISLIMappedonSMOS.nc')
 H = GRISLI.variables['H']
 S = GRISLI.variables['S']
 Zeta = GRISLI.variables['Zeta']
