@@ -34,12 +34,17 @@ XpixS=(XsS-X[0][0])//Lx+1
 YpixS=(YsS-Y[-1][-1])//Ly+1
 
 #Emissivity computed with Tiuri
-ETiuri=[0.985,1,0.98,0.992,0.964,0.979,0.987, 0.988]
+ETiuri=[0.985,0.995,0.98,0.992,0.964,0.979,0.987, 0.988]
 EGRISLI=[E[int(j),int(i)] for i,j in zip(XpixS, 201-YpixS)]
 
 [plt.scatter(et, eg, label=site) for site, et, eg in zip(SitesS, ETiuri, EGRISLI)]
 plt.plot([0,1],[0,1], c='r')
+plt.axis("equal")
 plt.xlim(0.96,1)
 plt.ylim(0.96,1)
+plt.xlabel("Emissivity from boreholes and Tiuri")
+plt.ylabel("Emissivity from GRISLI and regression model")
+
 plt.legend()
+plt.grid()
 plt.show()

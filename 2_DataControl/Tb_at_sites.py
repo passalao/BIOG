@@ -219,6 +219,7 @@ ZMcM2=np.arange(0,50*np.shape(TMcM2)[0],50)
 colors=['r','b','g','k','orange','pink','purple',"gray"]
 
 #Plot
+TsAtSites=[]
 i=0
 for site, c in zip(Sites, colors):
     #color=colors[i]
@@ -229,7 +230,7 @@ for site, c in zip(Sites, colors):
     plt.plot(Tz_Obs, depth, label=site, color=c)
     [plt.scatter(Tb_Obs[0,j,i]-273.15, 0,color=c) for i,j,c in zip(XpixS, YpixS, colors)]
     [plt.scatter(Tb_ObsN[0,j,i]-273.15, 0,color="gray") for i,j in zip(XpixN, YpixN)]
-
+    TsAtSites.append(Tz_Obs[0])
     plt.legend()
     i=i+1
 
@@ -259,8 +260,7 @@ plt.plot(Tz_gr[57, 149], (1 - Zeta[57,149]) * H[57, 149], c='r')
 plt.plot(Tz_gr[55, 146], (1 - Zeta[55,146]) * H[55, 146], c='g')
 plt.plot(Tz_gr[54, 142], (1 - Zeta[54,142]) * H[54, 142], c='b', label='GRISLI')'''
 #[plt.plot(Tz_gr[j,i], (1 - Zeta[j,i]) * H[j,i]) for i, j in zip(x,y)]
-
-#[plt.plot(Tz_gr[j,i], (1 - Zeta[j,i]) * H[j,i], '--',color=c) for i, j, k, site, c in zip(XpixS,YpixS, np.arange(0,np.size(XpixS),1),Sites, colors)]
+[plt.plot(Tz_gr[j,i]-Tz_gr[j,i][0]+TsAtSites[k], (1 - Zeta[j,i]) * H[j,i], '--',color=c) for i, j, k, site, c in zip(XpixS,YpixS, np.arange(0,np.size(XpixS),1),Sites, colors)]
 #[print((Uxbar[j,i]**2+Uybar[j,i]**2)**0.5) for i, j in zip(XpixS,YpixS)]
 
 #plt.plot(TMcM1, ZMcM1, c='darkgreen', label="Robin")
