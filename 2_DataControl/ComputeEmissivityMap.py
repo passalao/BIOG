@@ -16,34 +16,43 @@ def ComputeTmoy(Zeta, H, Tz_gr, Layerthick, TsRef):
             if TsRef[i,j]<-52.5:
                 Depth=1350
                 #Depth=1600
+                #Depth=1500
             if TsRef[i,j]<-50 and TsRef[i,j]>-52.5:
                 Depth = 1250
                 #Depth = 1250
+                #Depth=1200
             if TsRef[i,j]<-47.5 and TsRef[i,j]>-50:
                 Depth = 730
                 #Depth = 740
+                #Depth=980
             if TsRef[i,j]<-45 and TsRef[i,j]>-47.5:
                 Depth = 680
                 #Depth = 710
+                #Depth=750
             if TsRef[i,j]<-40 and TsRef[i,j]>-45:
                 Depth = 480
                 #Depth = 470
+                #Depth=430
             if TsRef[i,j]<-35 and TsRef[i,j]>-40:
                 Depth = 160
                 #Depth = 580
+                #Depth=230
             if TsRef[i,j]>-35:
                 Depth = 40
                 #Depth = 270
+                #Depth=1600
 
+            #Depth=580
             if np.shape(np.arange(0, H[i, j], Layerthick))[0] > (Depth / Layerthick):
                 Tmoy[i, j] = 273.15 + np.mean(
                     np.interp(np.arange(0, H[i, j], Layerthick), (1 - Zeta[i, j]) * H[i, j], Tz_gr[i, j, :])[
                     0:Depth // Layerthick])
             else:
                 Tmoy[i, j] = -9999
+
     return Tmoy
 
-TsData="Crocus"#"MAR" or "Crocus"
+TsData="Crocus"#"MAR", "Crocus" or "Hybrid"
 
 # Import SMOS data
 print("Load data")
@@ -67,13 +76,16 @@ if TsData=="MAR":
 elif TsData=="Crocus":
     TsR= netCDF4.Dataset('../../SourceData/WorkingFiles/TbSMOSandTsCrocus.nc')
     TsRef=TsR.variables['TsCrocus'][::-1,:]-273.15
+elif TsData=="Hybrid":
+    TsR= netCDF4.Dataset('../../SourceData/WorkingFiles/TsHybrid.nc')
+    TsRef=TsR.variables['TsHybrid'][::-1,:]-273.15
 
 TatDepth=np.zeros(np.shape(TsRACMO))
 Tmoy=np.zeros(np.shape(TsRACMO))
 Layerthick=10 #Layer thickness for interpolation
 
 print("Compute Tmoy")
-Tmoy=ComputeTmoy(Zeta, H, Tz_gr, Layerthick, TsRef)
+Tmoy=ComputeTmoy(Zeta, H, Tz_gr, Layerthick, TsRef)#Mettre TsRACMO pour éliminer le hiatus : marche pas complètement...
 print(Tmoy)
 Emissivity=Tb/(Tmoy+TsRef-TsRACMO)
 

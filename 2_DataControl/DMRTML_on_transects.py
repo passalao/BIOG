@@ -23,7 +23,8 @@ Lx=25e3
 Ly=25e3
 
 #Import transect coordinates
-TransCoord=np.loadtxt("../../SourceData/Macelloni2016/Macelloni2016_DataTransects/"+Transect+".csv", comments="#", delimiter=" ")
+TransCoord=np.loadtxt("../../SourceData/Transects/"+Transect+".csv", comments="#", delimiter=" ")
+#TransCoord=np.loadtxt("../../SourceData/Macelloni2016/Macelloni2016_DataTransects/"+Transect+".csv", comments="#", delimiter=" ")
 wgs84 = pyproj.Proj("+init=EPSG:4326")
 StereoPol = pyproj.Proj(init="EPSG:6932")
 Xs, Ys = pyproj.transform(wgs84, StereoPol, TransCoord[:,0], TransCoord[:,1])
@@ -34,6 +35,7 @@ Tb=[Tb_Obs[0, j, i] for i,j in zip(Xpix,Ypix)]
 # Import temperature data
 for t in TempSource:
     if t=="Robin":
+        continue
         FileName="transect_"+Transect+"_Tprof_RobinCrocusGhf60.txt"
         Temp_trans=np.genfromtxt("../../SourceData/Macelloni2016/Macelloni2016_DataTransects/"+FileName, dtype=None, delimiter=" ")
         Temp_trans=Temp_trans-273.15
@@ -59,31 +61,42 @@ for t in TempSource:
     TsH = TsH[::-1,:]
     TstransHelene=[TsH[int(j),int(i)] for i,j in zip(Xpix, Ypix)]
 
-    Dist=np.arange(0,np.shape(Temp_trans)[0],1)
-    Tb_modobs=np.zeros(np.shape(Temp_trans)[0])
-    Ts=np.zeros(np.shape(Temp_trans)[0])
+    # Import emissivity, computed from regression model
+    Emissivity = netCDF4.Dataset('../../SourceData/WorkingFiles/Emissivity.nc')
+    E = Emissivity.variables['Emissivity']
+    E=E[::-1,:]
+    Etrans=[E[int(j),int(i)] for i,j in zip(Xpix, Ypix)]
+    Dist=np.arange(0,np.shape(TstransHelene)[0],1)
+    Tb_modobs=np.zeros(np.shape(TstransHelene)[0])
+    Ts=np.zeros(np.shape(TstransHelene)[0])
+
+    #TODO : corriger Dist en fonction des vraies coordonnées
 
     print('DMRTML computation: ',t)
     j=0
 
     for tz in Temp_trans:
         if t=="Robin":
+            continue
             imax=np.where(tz == max(tz))[0][0]
             Thick=imax*50
             tz=tz[0:imax]
         elif t == "GRISLI":
             Thick=H_trans[j]
         Ts[j]=tz[0]+273.15
+        #tz=tz+TstransHelene[j]-tz[0]-273.15#T(z) correction from bias of Ts RACMO
         Tb_modobs[j] = BIOG.fun.GetTb(tz, Thick, BIOG.var.NbLayers, BIOG.var.Freq, BIOG.var.Angle, BIOG.var.NbStreams,BIOG.var.Perm, BIOG.var.RTModel,0)
+        Tb_modobs[j]=Tb_modobs[j]*Etrans[j]
         j=j+1
+    #plt.plot(Dist, TstransHelene, color='dodgerblue', lw='1.5', label="Ts Crocus")
     if t == "Robin":
+        continue
         plt.plot(Dist, Tb_modobs, c="blue", lw='1.5', label='Tb Robin') #royalblue for Matzler
-        plt.plot(Dist, TstransHelene, color='dodgerblue', lw='1.5', label="Ts Crocus")
     elif t=="GRISLI":
         plt.plot(Dist, Tb_modobs, c="orangered", lw='1.5', label='Tb GRISLI')  # royalblue for Matzler
         plt.plot(Dist, Ts, color="coral", lw='1.5',label='Ts RACMO')
-        plt.plot(Dist[2:-2], GradS, color="coral", lw='1.5',label='GradS')
-        plt.plot(Dist, S_trans, color="k", lw='1.5',label='S')
+        #plt.plot(Dist[2:-2], GradS, color="coral", lw='1.5',label='GradS')
+        #plt.plot(Dist, S_trans, color="k", lw='1.5',label='S')
 
 plt.plot(Dist, Tb, color="mediumseagreen", lw='1.5', label='Tb SMOS')
 plt.grid()
@@ -91,5 +104,6 @@ plt.legend()
 plt.xlabel("Distance from Dome C (km)")
 plt.ylabel("Brightness temperature (K)")
 plt.xlim(0,700)
-plt.ylim(210,235)
+
+#plt.ylim(210,235)
 plt.show()

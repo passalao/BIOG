@@ -4,42 +4,11 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 import numpy as np
 import pyproj
-from sklearn import linear_model
 import sys, time
 sys.path.insert(0, "/home/passalao/Documents/SMOS-FluxGeo/BIOG")
 import BIOG
 
-def ComputeCorr(Tz_gr,H,Depth,TsMin, TsMax,Subsample):
-    Teff = []
-    TbObs=[]
-    for i in np.arange(0,np.shape(H)[0], Subsample):
-        for j in np.arange(0,np.shape(H)[1], Subsample):
-            if Ts[i,j]>TsMin and Ts[i,j]<TsMax and H[i,j]>10:
-                Teff.append(273.15+sum(Tz_gr[i,j]*np.exp(-(1-Zeta[i,j,:])*H[i,j]/Depth)*0.05*H[i,j]/Depth))
-                TbObs.append(Tb[i,j])
-    Teff=np.array(Teff)
-    TbObs=np.array(TbObs)
-    Teff=Teff[TbObs < 1e45]
-    TbObs = TbObs[TbObs < 1e45]
-    Emissivity=np.array(TbObs)/np.array(Teff)
-    emoy = np.mean(Emissivity)
-    J1=sum((Teff-TbObs)**2)
-    J2=sum((Emissivity[Emissivity>=1.0]-emoy)**2)
-    #print("Depth:", Depth, "Emiss:", np.mean(Emissivity))
-
-    #Compyute regression
-    regr = linear_model.LinearRegression()
-    regr.fit(TbObs[:, np.newaxis], Teff)
-    x_test = np.linspace(np.min(TbObs), np.max(TbObs), 100)
-    print("Score:", regr.score(TbObs[:, np.newaxis], Teff))
-
-    #if Depth==700:
-    '''plt.plot(x_test, regr.predict(x_test[:, np.newaxis]), color='blue')
-    plt.scatter(TbObs, Teff,s=0.1)
-    plt.plot([210,270],[210,270],c='r')
-    plt.text(220,260,d)
-    plt.show()'''
-    return Teff, J1, J2
+TsData="Crocus"#"MAR", "Crocus" or "Hybrid"
 
 # Import SMOS data
 print("Load data")
@@ -51,51 +20,48 @@ Mask = Obs.variables['mask']
 Tb=Tb[0]
 
 # Import temperature data
-GRISLI = netCDF4.Dataset('../../SourceData/WorkingFiles/TB40S123_1_Corrected4Ts.nc')
+GRISLI = netCDF4.Dataset('../../SourceData/WorkingFiles/TB40S123_1_MappedonSMOS.nc')
 H = np.array(GRISLI.variables['H'])
 Zeta = GRISLI.variables['Zeta']
 Tz_gr = GRISLI.variables['T']
-Ts=Tz_gr[:,:,0]
+TsRACMO=Tz_gr[:,:,0]
 
-TsMax=-45
-TsMin=-50
-Subsample=1
-LayerThick=10
+'''D=[250,350,400,450, 510,550,580,600,750,1000,1250]
+C=[9.07,6.3,4.89, 3.47,2.07,1.18,1.01,0.94,0.68,0.32,0.24]
+plt.plot(D,C)
+plt.scatter(D,C)
+plt.plot([200,1350],[1,1], c='r', lw=0.5)
+plt.xlabel("Depth to compute Tmoy (m)")
+plt.ylabel("Regression coefficient")
+plt.xlim(200,1300)
+plt.grid()
+plt.show()'''
 
-#Determine which Depth is the best one
-Depths=np.arange(300,1100,100)
-#Alpha=np.arange(0,-1e6,-1e4)
+if TsData=="MAR":
+    TsR = netCDF4.Dataset('../../SourceData/WorkingFiles/TsMAR.nc')
+    TsRef = TsR.variables['TsMAR'][::-1, :]
+elif TsData=="Crocus":
+    TsR= netCDF4.Dataset('../../SourceData/WorkingFiles/TbSMOSandTsCrocus.nc')
+    TsRef=TsR.variables['TsCrocus'][::-1,:]-273.15
+elif TsData=="Hybrid":
+    TsR= netCDF4.Dataset('../../SourceData/WorkingFiles/TsHybrid.nc')
+    TsRef=TsR.variables['TsHybrid'][::-1,:]-273.15
 
-#for a in Alpha:
-J1 = []
-J2 = []
-for d in Depths:
-    Data=ComputeCorr(Tz_gr, H, d, TsMin, TsMax, Subsample)
-    J1.append(Data[1])
-    J2.append(Data[2])
-    #print((max(J1)-min(J1))/(max(J2)-min(J2)))
-    #Jtot=J1[-1]+a*J2[-1]
-    #print(a,d,Jtot)
-print(min(J1), max(J1))
-J1=np.array(J1)
-J2=np.array(J2)
-J1=(J1-min(J1))/(max(J1)-min(J1))
-J2=(J2-min(J2))/(max(J2)-min(J2))
-
-Jtot=(J1+J2)/2
-
-plt.plot(Depths,J1,c="b", label="J1: Teff-Tb")
-plt.plot(Depths,J2,c="r", label="J2: Emiss-Emissbar")
-plt.plot(Depths,Jtot,c="k", label='Total')
-plt.xlabel('Depths (m)')
-plt.ylabel('Cost functions, normalized')
-plt.legend()
-plt.title(str(TsMin)+ "< Ts < "+str(TsMax))
-plt.show()
+TatDepth=np.zeros(np.shape(TsRACMO))
+Tmoy=np.zeros(np.shape(TsRACMO))
+Depth=50#Ice thickness contributing to the brightness temperature
+Layerthick=10 #Layer thickness for interpolation
 
 print("Compute Tmoy")
+for i in np.arange(0,np.shape(H)[0]):
+    for j in np.arange(0,np.shape(H)[1]):
+        if np.shape(np.arange(0,H[i,j],Layerthick))[0]>(Depth/Layerthick):
+            Tmoy[i,j]=273.15+np.mean(np.interp(np.arange(0,H[i,j],Layerthick), (1-Zeta[i,j])*H[i,j], Tz_gr[i,j,:])[0:Depth//Layerthick])
+        else:
+            Tmoy[i, j]=-9999
 
-
+DeltaT=Tmoy-TsRACMO-273.15
+TbTs=Tb-TsRef-273.15
 TmoyTb=Tmoy-Tb
 
 #Calculate dependence of Ts-Tb on Ts-TatDepth
