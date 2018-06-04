@@ -8,51 +8,25 @@ import sys, time
 sys.path.insert(0, "/home/passalao/Documents/SMOS-FluxGeo/BIOG")
 import BIOG
 
-def ComputeTmoy(Zeta, H, Tz_gr, Layerthick, TsRef):
-    Tmoy = np.zeros(np.shape(H))
+def ComputeEmissivity(Zeta, H, Tz_gr, Tb, Ts):
+    Teff=np.zeros(np.shape(H))
+    Emissivity=np.zeros(np.shape(H))
+
     for i in np.arange(0, np.shape(H)[0]):
         for j in np.arange(0, np.shape(H)[1]):
-            #Determine Ts:
-            if TsRef[i,j]<-52.5:
-                Depth=1350
-                #Depth=1600
-                #Depth=1500
-            if TsRef[i,j]<-50 and TsRef[i,j]>-52.5:
-                Depth = 1250
-                #Depth = 1250
-                #Depth=1200
-            if TsRef[i,j]<-47.5 and TsRef[i,j]>-50:
-                Depth = 730
-                #Depth = 740
-                #Depth=980
-            if TsRef[i,j]<-45 and TsRef[i,j]>-47.5:
-                Depth = 680
-                #Depth = 710
-                #Depth=750
-            if TsRef[i,j]<-40 and TsRef[i,j]>-45:
-                Depth = 480
-                #Depth = 470
-                #Depth=430
-            if TsRef[i,j]<-35 and TsRef[i,j]>-40:
-                Depth = 160
-                #Depth = 580
-                #Depth=230
-            if TsRef[i,j]>-35:
-                Depth = 40
-                #Depth = 270
-                #Depth=1600
-
-            #Depth=580
-            if np.shape(np.arange(0, H[i, j], Layerthick))[0] > (Depth / Layerthick):
-                Tmoy[i, j] = 273.15 + np.mean(
-                    np.interp(np.arange(0, H[i, j], Layerthick), (1 - Zeta[i, j]) * H[i, j], Tz_gr[i, j, :])[
-                    0:Depth // Layerthick])
-            else:
-                Tmoy[i, j] = -9999
-
-    return Tmoy
-
-TsData="Crocus"#"MAR", "Crocus" or "Hybrid"
+            if Ts[i, j] > -55 and Ts[i, j] < -50 :
+                Depth=1000
+            if Ts[i, j] > -50 and Ts[i, j] < -45:
+                Depth = 600
+            if Ts[i, j] > -45 and Ts[i, j] < -40 :
+                Depth=375
+            if Ts[i, j] > -40 and Ts[i, j] < -35:
+                Depth = 325
+            if Ts[i, j] > -35:
+                Depth = 250
+            Teff[i,j]=273.15 + sum(Tz_gr[i, j] * np.exp(-(1 - Zeta[i, j]) * H[i, j] / Depth) * 0.05 * H[i, j] / Depth)/ sum(np.exp(-(1 - Zeta[i, j]) * H[i, j] / Depth) * 0.05 * H[i, j] / Depth)
+            Emissivity[i,j]=Tb[i,j]/Teff[i,j]
+    return Emissivity
 
 # Import SMOS data
 print("Load data")
@@ -64,30 +38,13 @@ Mask = Obs.variables['mask']
 Tb=Tb[0]
 
 # Import temperature data
-GRISLI = netCDF4.Dataset('../../SourceData/WorkingFiles/TB40S123_1_MappedonSMOS.nc')
+GRISLI = netCDF4.Dataset('../../SourceData/WorkingFiles/TB40S123_1_Corrected4Ts.nc')
 H = np.array(GRISLI.variables['H'])
 Zeta = GRISLI.variables['Zeta']
 Tz_gr = GRISLI.variables['T']
-TsRACMO=Tz_gr[:,:,0]
+Ts=Tz_gr[:,:,0]
 
-if TsData=="MAR":
-    TsR = netCDF4.Dataset('../../SourceData/WorkingFiles/TsMAR.nc')
-    TsRef = TsR.variables['TsMAR'][::-1, :]
-elif TsData=="Crocus":
-    TsR= netCDF4.Dataset('../../SourceData/WorkingFiles/TbSMOSandTsCrocus.nc')
-    TsRef=TsR.variables['TsCrocus'][::-1,:]-273.15
-elif TsData=="Hybrid":
-    TsR= netCDF4.Dataset('../../SourceData/WorkingFiles/TsHybrid.nc')
-    TsRef=TsR.variables['TsHybrid'][::-1,:]-273.15
-
-TatDepth=np.zeros(np.shape(TsRACMO))
-Tmoy=np.zeros(np.shape(TsRACMO))
-Layerthick=10 #Layer thickness for interpolation
-
-print("Compute Tmoy")
-Tmoy=ComputeTmoy(Zeta, H, Tz_gr, Layerthick, TsRef)#Mettre TsRACMO pour éliminer le hiatus : marche pas complètement...
-print(Tmoy)
-Emissivity=Tb/(Tmoy+TsRef-TsRACMO)
+Emissivity=ComputeEmissivity(Zeta, H, Tz_gr, Tb, Ts)
 
 #Emissivity=Emissivity*(4-np.array(Mask))/3
 
