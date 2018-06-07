@@ -50,9 +50,9 @@ Uxbar=GRISLI.variables['UXBAR']
 Uybar=GRISLI.variables['UYBAR']
 Us_gr=(np.array(Uxbar)**2+np.array(Uybar)**2)**0.5*4/3
 
-SitesS=['DomeC', 'Vostok', 'DomeFuji', 'EDML','SipleDome','Byrd','LawDome']#, 'T-UC', 'T-AIS']
-Lon=[123.3952,106.7114,39.7222,0.05161,-149.2426,-119.31,112.8067]#,-138.372,-138.946]
-Lat=[-75.1017,-78.4719,-77.3088,-75.00,-81.6620,-80.01,-66.7391]#,-83.679,-83.4619]
+SitesS=['DomeC', 'Vostok', 'DomeFuji', 'EDML','SipleDome','Byrd','LawDome', 'Berkner']#, 'T-UC', 'T-AIS']
+Lon=[123.3952,106.7114,39.7222,0.05161,-149.2426,-119.31,112.8067, -45.6783]#,-138.372,-138.946]
+Lat=[-75.1017,-78.4719,-77.3088,-75.00,-81.6620,-80.01,-66.7391, -79.5483]#,-83.679,-83.4619]
 wgs84 = pyproj.Proj("+init=EPSG:4326")
 StereoPolS = pyproj.Proj(init="EPSG:6932")
 XsS, YsS = pyproj.transform(wgs84, StereoPolS, Lon, Lat)
@@ -72,7 +72,7 @@ YpixN=(YsN-YN[0][0])//LyN+1
 Sites=SitesS+SitesN
 Xpix=np.concatenate([XpixS,XpixN])
 Ypix=np.concatenate([YpixS,YpixN])
-Emiss=[0.985,1,0.98,0.992,0.964,0.979,0.987, 0.988]
+Emiss=[0.988,1,0.982,0.994,0.97,0.984,0.989, 0.98, 0.988]
 
 nbfields=7
 OutData=np.zeros((np.shape(Sites)[0],nbfields))
@@ -98,7 +98,7 @@ DeltaTFirn=np.zeros(np.shape(Sites))
 Perm=['Tiuri', 'Matzler']
 k=0
 for site in Sites:
-    print(site)
+    #print(site)
     j=Ypix[k]
     i=Xpix[k]
     #Tz_gr_at_Point = Tz_gr[j,i, :]
@@ -141,6 +141,7 @@ for site in Sites:
     f.write("\n")'''
     k=k+1
 
+print(Error)
 cmap = plt.get_cmap('rainbow')
 
 '''plt.scatter(Error[:,0],Error[:,1], c=dTdzbar, cmap=cmap)
@@ -162,12 +163,12 @@ plt.bar(dTdzbar-2e-4, height=Error[:,0], width=5e-4, color='b',label="Tiuri")
 '''plt.bar(T500_Obs, height=Error[:,1], width=0.75, color='r', label="Mätzler")
 plt.bar(T500_Obs-0.25, height=Error[:,0], width=0.75, color='b',label="Tiuri")
 [plt.text(gradt-1e-3,em+1.5,site, rotation=90) for gradt,em,site in zip(T500_Obs, Error[:,1],Sites)]'''
-plt.grid(which='both')
+'''plt.grid(which='both')
 plt.ylabel("Tb model - Tb SMOS (K), corrected for emissivity")
 plt.xlabel("T(d=500 m) (K)")
 plt.legend()
 #plt.ylim(-2,15)
-plt.show()
+plt.show()'''
 
 '''Ts_gr = [ Tz_gr[j,i][0] for i, j in zip(XpixS, YpixS)]
 T500_gr = np.array([ np.interp(np.arange(0,H[j,i],100),(np.arange(0,1.05,0.05)*H[j,i]),Tz_gr[j,i])[5] for i, j in zip(XpixS, YpixS)])
@@ -216,14 +217,14 @@ ZMcM1=np.arange(0,50*np.shape(TMcM1)[0],50)
 TMcM2=-273.15+np.array([226.469,226.766,227.073,227.392,227.722,228.063,228.417,228.782,229.159,229.549,229.951,230.366,230.794,231.234,231.688,232.155,232.636,233.129,233.637,234.158,234.693,235.241,235.803,236.379,236.969,237.573,238.190,238.822,239.466,240.125,240.797,241.482,242.181,242.893,243.617,244.355,245.105,245.867,246.642,247.428,248.226,249.036,249.856,250.687,251.529,252.380,253.242,254.112,254.991,255.879,256.775,257.678,258.589,259.506,260.430,261.359,262.294,263.233,264.176,265.123,266.074,267.027,267.982,268.939,269.897])
 ZMcM2=np.arange(0,50*np.shape(TMcM2)[0],50)
 
-colors=['r','b','g','k','orange','pink','purple',"gray"]
+colors=['r','b','g','k','orange','pink','purple',"yellow","gray"]
 
 #Plot
 TsAtSites=[]
 i=0
 for site, c in zip(Sites, colors):
     #color=colors[i]
-    print(site)
+    #print(site)
     Data = loadtxt("../../SourceData/Temperatures/"+str(site)+".csv", comments="#", delimiter=",",unpack=False)
     Tz_Obs = Data[:, 1]
     depth = Data[:, 0]
@@ -275,5 +276,5 @@ plt.ylabel("Depth (m)")
 plt.gca().invert_yaxis()
 plt.grid()
 plt.legend()
-plt.show()
+#plt.show()
 

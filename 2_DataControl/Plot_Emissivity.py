@@ -24,9 +24,9 @@ Lx=25e3
 Ly=25e3
 
 #Sites
-SitesS=['DomeC', 'Vostok', 'DomeFuji', 'EDML','SipleDome','Byrd','LawDome']#, 'T-UC', 'T-AIS']
-Lon=[123.3952,106.7114,39.7222,0.05161,-149.2426,-119.31,112.8067]#,-138.372,-138.946]
-Lat=[-75.1017,-78.4719,-77.3088,-75.00,-81.6620,-80.01,-66.7391]#,-83.679,-83.4619]
+SitesS=['DomeC', 'Vostok', 'DomeFuji', 'EDML','SipleDome','Byrd','LawDome','Berkner']#, 'T-UC', 'T-AIS']
+Lon=[123.3952,106.7114,39.7222,0.05161,-149.2426,-119.31,112.8067, -45.6783]#,-138.372,-138.946]
+Lat=[-75.1017,-78.4719,-77.3088,-75.00,-81.6620,-80.01,-66.7391, -79.5483]
 wgs84 = pyproj.Proj("+init=EPSG:4326")
 StereoPolS = pyproj.Proj(init="EPSG:6932")
 XsS, YsS = pyproj.transform(wgs84, StereoPolS, Lon, Lat)
@@ -34,7 +34,8 @@ XpixS=(XsS-X[0][0])//Lx+1
 YpixS=(YsS-Y[-1][-1])//Ly+1
 
 #Emissivity computed with Tiuri
-ETiuri=[0.985,0.995,0.98,0.992,0.964,0.979,0.987, 0.988]
+#ETiuri=[0.985,0.995,0.98,0.992,0.964,0.979,0.987]#, 0.988]
+ETiuri=[0.988,1,0.982,0.994,0.97,0.984,0.989, 0.98]
 EGRISLI=[E[int(j),int(i)] for i,j in zip(XpixS, 201-YpixS)]
 
 [plt.scatter(et, eg, label=site) for site, et, eg in zip(SitesS, ETiuri, EGRISLI)]

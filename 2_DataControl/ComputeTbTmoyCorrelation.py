@@ -46,7 +46,7 @@ def ComputeCorr(Tz_gr,H,Depth,TsMin, TsMax,Subsample):
 
     #Compute covariance
     m=np.stack(((Emissivity-np.mean(Emissivity))/np.std(Emissivity), (Teff-np.mean(Teff))/np.std(Teff)), axis=0)
-    Cov=np.cov(m)
+    Cov=(np.cov(m))**2
     print("Covariance: ", Cov[0,1])
 
     '''#if Depth==700:
@@ -62,9 +62,17 @@ def ComputeCorr(Tz_gr,H,Depth,TsMin, TsMax,Subsample):
     plt.ylabel("Tbmod")
     plt.text(220,260,d)
     plt.show()'''
+
     J1=sum((Tbmod-TbObs)**2)
+    J2=sum((Emissivity[Emissivity>1]-1)**2)
+
+    #J1=sum(((Tbmod-TbObs)/np.std(Tbmod))**2)/np.size(Tbmod)
     #J2=sum((Emissivity-np.mean(Emissivity))**2)
-    J2=sum((Emissivity[Emissivity>=1.0]-1)**2)
+    #[Emissivity>=1.0]
+    '''if np.size(Emissivity[Emissivity>=1.0])!=0:
+        J2=sum(((Emissivity[Emissivity>=1.0]-1)/(np.std(Emissivity))**2))#/np.size(Emissivity[Emissivity>=1.0])
+    else:
+        J2=0'''
     return Teff, J1, J2, regr.coef_, r**2, 100*np.std(Emissivity), Cov[0,1]
 
 # Import SMOS data
@@ -84,12 +92,12 @@ Tz_gr = GRISLI.variables['T']
 Ts=Tz_gr[:,:,0]
 
 TsMax=-50
-TsMin=-52.5
+TsMin=-55
 Subsample=1
 LayerThick=10
 
 #Determine which Depth is the best one
-Depths=np.arange(50,1000,25)
+Depths=np.arange(50,1500,100)
 #Alpha=np.arange(0,-1e6,-1e4)
 
 #for a in Alpha:
@@ -110,20 +118,20 @@ for d in Depths:
     #print((max(J1)-min(J1))/(max(J2)-min(J2)))
     #Jtot=J1[-1]+a*J2[-1]
     #print(a,d,Jtot)
-print(min(J1), max(J1))
+#print(min(J1), max(J1))
 J1=np.array(J1)
 J2=np.array(J2)
 J1=(J1-min(J1))/(max(J1)-min(J1))
 J2=(J2-min(J2))/(max(J2)-min(J2))
 
-Jtot=(J1+J2)/2
+#Jtot=(J1+J2)/2
 
 plt.plot(Depths,J1,c="b", label="J1: Teff-Tb")
 plt.plot(Depths,J2,c="r", label="J2: Emiss-1")
 #plt.plot(Depths,Jtot,c="k", label='Total')
 plt.plot(Depths,Scores,c="purple", label='Explained variance r$^2$')
-plt.plot(Depths,Coeffs,c="orange", label='Mean emissivity')
-plt.plot(Depths,StdEmiss,c="green", label='StDev Emissivity')
+#plt.plot(Depths,Coeffs,c="orange", label='Mean emissivity')
+#plt.plot(Depths,StdEmiss,c="green", label='StDev Emissivity')
 plt.plot(Depths,Cov,c="pink", label='Cov. Emiss/Teff')
 #plt.plot([min(Depths), max(Depths)],[1,1],'--',c='r')
 plt.xlabel('Depths (m)')

@@ -14,8 +14,9 @@ def ComputeEmissivity(Zeta, H, Tz_gr, Tb, Ts):
 
     for i in np.arange(0, np.shape(H)[0]):
         for j in np.arange(0, np.shape(H)[1]):
-            if Ts[i, j] > -55 and Ts[i, j] < -50 :
-                Depth=1000
+            Depth=3.3*math.exp(-0.11*Ts[i,j])
+            '''if Ts[i, j] > -55 and Ts[i, j] < -50 :
+                Depth=950
             if Ts[i, j] > -50 and Ts[i, j] < -45:
                 Depth = 600
             if Ts[i, j] > -45 and Ts[i, j] < -40 :
@@ -23,7 +24,7 @@ def ComputeEmissivity(Zeta, H, Tz_gr, Tb, Ts):
             if Ts[i, j] > -40 and Ts[i, j] < -35:
                 Depth = 325
             if Ts[i, j] > -35:
-                Depth = 250
+                Depth = 250'''
             Teff[i,j]=273.15 + sum(Tz_gr[i, j] * np.exp(-(1 - Zeta[i, j]) * H[i, j] / Depth) * 0.05 * H[i, j] / Depth)/ sum(np.exp(-(1 - Zeta[i, j]) * H[i, j] / Depth) * 0.05 * H[i, j] / Depth)
             Emissivity[i,j]=Tb[i,j]/Teff[i,j]
     return Emissivity
@@ -49,10 +50,10 @@ Emissivity=ComputeEmissivity(Zeta, H, Tz_gr, Tb, Ts)
 #Emissivity=Emissivity*(4-np.array(Mask))/3
 
 fig, ax = plt.subplots(nrows=1, ncols=1)
-norm = mpl.colors.Normalize(vmin=0.95, vmax=1)
+norm = mpl.colors.Normalize(vmin=0.9, vmax=1)
 cmap = mpl.cm.spectral
 myplot=ax.pcolormesh(Emissivity, cmap=cmap, norm=norm)
-cbar = fig.colorbar(myplot, ticks=np.arange(0.95, 1.01, 0.01))
+cbar = fig.colorbar(myplot, ticks=np.arange(0.90, 1.01, 0.01))
 cbar.set_label('Emissivity', rotation=270)
 cbar.ax.set_xticklabels(['0.95', '0.96', '0.97', '0.98', '0.99', '1.0'])
 plt.show()
