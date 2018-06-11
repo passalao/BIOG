@@ -42,7 +42,7 @@ LyN=25e3
 
 #Import GRISLI data
 #GRISLI = netCDF4.Dataset('../../SourceData/WorkingFiles_GRISLIini/GRISLIMappedonSMOS.nc')
-GRISLI = netCDF4.Dataset('../../SourceData/WorkingFiles/TB40S123_1_MappedonSMOS.nc')#
+GRISLI = netCDF4.Dataset('../../SourceData/WorkingFiles/TB40S123_1_Corrected4TsandTb.nc')#MappedonSMOS.nc')#
 H = GRISLI.variables['H']
 Zeta = GRISLI.variables['Zeta']
 Tz_gr = GRISLI.variables['T']
@@ -72,7 +72,10 @@ YpixN=(YsN-YN[0][0])//LyN+1
 Sites=SitesS+SitesN
 Xpix=np.concatenate([XpixS,XpixN])
 Ypix=np.concatenate([YpixS,YpixN])
-Emiss=[0.988,1,0.982,0.994,0.97,0.984,0.989, 0.98, 0.988]
+if BIOG.var.Perm=="Tiuri":
+    Emiss=[0.988,1,0.982,0.994,0.97,0.984,0.989, 0.98, 0.988]
+if BIOG.var.Perm=="Matzler":
+    Emiss=[0.956,0.982,0.947,0.974,0.953,0.981,0.986,0.963,0.994]
 
 nbfields=7
 OutData=np.zeros((np.shape(Sites)[0],nbfields))
@@ -276,5 +279,5 @@ plt.ylabel("Depth (m)")
 plt.gca().invert_yaxis()
 plt.grid()
 plt.legend()
-#plt.show()
+plt.show()
 

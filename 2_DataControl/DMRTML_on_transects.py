@@ -10,7 +10,7 @@ import BIOG
 from io import StringIO
 
 #Variables
-Transect="DC2Triangle"#DC2McM, DC2VL or DC2Triangle
+Transect="DC2VL"#DC2McM, DC2VL or DC2Triangle
 TempSource=["GRISLI", "Robin"] #Robin or GRISLI
 
 # Import SMOS data
@@ -40,7 +40,7 @@ for t in TempSource:
         Temp_trans=np.genfromtxt("../../SourceData/Macelloni2016/Macelloni2016_DataTransects/"+FileName, dtype=None, delimiter=" ")
         Temp_trans=Temp_trans-273.15
     elif t=="GRISLI":
-        GRISLI = netCDF4.Dataset('../../SourceData/WorkingFiles/TB40S004_1_MappedonSMOS.nc')
+        GRISLI = netCDF4.Dataset('../../SourceData/WorkingFiles/TB40S123_1_Corrected4Ts.nc')#MappedonSMOS.nc')
         H = GRISLI.variables['H']
         S = GRISLI.variables['S']
         Zeta = GRISLI.variables['Zeta']
@@ -94,7 +94,7 @@ for t in TempSource:
         plt.plot(Dist, Tb_modobs, c="blue", lw='1.5', label='Tb Robin') #royalblue for Matzler
     elif t=="GRISLI":
         plt.plot(Dist, Tb_modobs, c="orangered", lw='1.5', label='Tb GRISLI')  # royalblue for Matzler
-        plt.plot(Dist, Ts, color="coral", lw='1.5',label='Ts RACMO')
+        plt.plot(Dist, Ts, color="coral", lw='1.5',label='Ts')
         #plt.plot(Dist[2:-2], GradS, color="coral", lw='1.5',label='GradS')
         #plt.plot(Dist, S_trans, color="k", lw='1.5',label='S')
 

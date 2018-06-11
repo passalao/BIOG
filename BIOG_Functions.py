@@ -91,6 +91,7 @@ def GetTb(Tz, H, NbLayers, Freq, Angle, NbStreams, Perm, Model, Tbatmo):
 
     if Model=="DMRT-ML":
         res = dmrtml.dmrtml_bis(Freq, NbStreams, thickness, density, radius, temp, medium=medium, soilp=soilp, tbatmodown=Tbatmo,eps_ice=(e_ice[0,:], e_ice[1,:]))
+        print(temp)
         return res.TbV(Angle)
 
     if Model=="SMRT":

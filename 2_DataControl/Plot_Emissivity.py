@@ -36,16 +36,29 @@ YpixS=(YsS-Y[-1][-1])//Ly+1
 #Emissivity computed with Tiuri
 #ETiuri=[0.985,0.995,0.98,0.992,0.964,0.979,0.987]#, 0.988]
 ETiuri=[0.988,1,0.982,0.994,0.97,0.984,0.989, 0.98]
+EMatzler=[0.956,0.982,0.947,0.974,0.953,0.981,0.986,0.963]
+
 EGRISLI=[E[int(j),int(i)] for i,j in zip(XpixS, 201-YpixS)]
 
-[plt.scatter(et, eg, label=site) for site, et, eg in zip(SitesS, ETiuri, EGRISLI)]
+fig=plt.figure()
+ax=fig.add_subplot(1,2,1)
+[ax.scatter(et, eg, label=site) for site, et, eg in zip(SitesS, ETiuri, EGRISLI)]
+plt.ylabel("Emissivity from GRISLI and regression model")
+plt.xlabel("Emissivity from boreholes and Tiuri")
+plt.grid()
 plt.plot([0,1],[0,1], c='r')
 plt.axis("equal")
 plt.xlim(0.96,1)
 plt.ylim(0.96,1)
-plt.xlabel("Emissivity from boreholes and Tiuri")
-plt.ylabel("Emissivity from GRISLI and regression model")
+
+ax=fig.add_subplot(1,2,2)
+[ax.scatter(et, eg, label=site) for site, et, eg in zip(SitesS, EMatzler, EGRISLI)]
+plt.xlabel("Emissivity from boreholes and Mätzler")
+plt.plot([0,1],[0,1], c='r')
+plt.axis("equal")
+plt.xlim(0.96,1)
+plt.ylim(0.96,1)
+plt.grid()
 
 plt.legend()
-plt.grid()
 plt.show()

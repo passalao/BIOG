@@ -14,17 +14,29 @@ def ComputeEmissivity(Zeta, H, Tz_gr, Tb, Ts):
 
     for i in np.arange(0, np.shape(H)[0]):
         for j in np.arange(0, np.shape(H)[1]):
-            Depth=3.3*math.exp(-0.11*Ts[i,j])
+            Depth=3.8*math.exp(-0.105*Ts[i,j])
+            #Depth=0.78*math.exp(-0.12*Ts[i,j])
+            #Depth=(-0.0116*Ts[i,j]-0.0327)*H[i,j]#When using reduced depth
+            #Depth=(-Ts[i,j]-28.89)/0.0756
             '''if Ts[i, j] > -55 and Ts[i, j] < -50 :
                 Depth=950
+                Depth= 200
+
             if Ts[i, j] > -50 and Ts[i, j] < -45:
                 Depth = 600
+                Depth= 200
+
             if Ts[i, j] > -45 and Ts[i, j] < -40 :
                 Depth=375
+                Depth= 200
+
             if Ts[i, j] > -40 and Ts[i, j] < -35:
                 Depth = 325
+                Depth= 100
+
             if Ts[i, j] > -35:
-                Depth = 250'''
+                Depth = 250
+                Depth= 50'''
             Teff[i,j]=273.15 + sum(Tz_gr[i, j] * np.exp(-(1 - Zeta[i, j]) * H[i, j] / Depth) * 0.05 * H[i, j] / Depth)/ sum(np.exp(-(1 - Zeta[i, j]) * H[i, j] / Depth) * 0.05 * H[i, j] / Depth)
             Emissivity[i,j]=Tb[i,j]/Teff[i,j]
     return Emissivity
