@@ -3,13 +3,20 @@ import netCDF4, math
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 import numpy as np
-import pyproj
+from scipy.stats import chi2_contingency as chi2
 from sklearn import linear_model
 import scipy.integrate as integrate
 import scipy.special as special
 import sys, time
 sys.path.insert(0, "/home/passalao/Documents/SMOS-FluxGeo/BIOG")
 import BIOG
+
+obs = np.array([[10, 15,20,25,30,35,40],[10, 15,20,25,30,35,40]])
+obs=np.stack(([[10, 15,20,25,30,35,40],[10, 14,21,24, 32,37, 41]]),axis=0)
+obs=np.stack(([[10, 15,20,25,30,35,40],[10, 14,21,24, 32,37, 41]]),axis=0)
+
+print(chi2(obs, lambda_="log-likelihood"))
+
 
 def ComputeCorrReduced(Tz_gr,H,ReducedDepth,TsMin, TsMax,Subsample):
     Depth=ReducedDepth*H
@@ -20,12 +27,14 @@ def ComputeCorr(Tz_gr,H,Depths,TsMin, TsMax,Subsample):
     Teff = []
     TbObs=[]
     Slopes=[]
+    print("Depth:", Depths[0,0])
     for i in np.arange(0,np.shape(H)[0], Subsample):
         for j in np.arange(0,np.shape(H)[1], Subsample):
             if Ts[i,j]>TsMin and Ts[i,j]<TsMax and H[i,j]>10:
                 Teff.append(273.15+sum(Tz_gr[i,j]*np.exp(-(1-Zeta[i,j])*H[i,j]/Depths[i,j])*0.05*H[i,j]/Depths[i,j])/sum(np.exp(-(1-Zeta[i,j])*H[i,j]/Depths[i,j])*0.05*H[i,j]/Depths[i,j]))
                 TbObs.append(Tb[i,j])
                 Slopes.append(GradS[i,j])
+
     Teff=np.array(Teff)
     TbObs=np.array(TbObs)
     Slopes=np.array(Slopes)
@@ -38,7 +47,6 @@ def ComputeCorr(Tz_gr,H,Depths,TsMin, TsMax,Subsample):
     sigmax=(sum((Teff-np.mean(Teff))**2)/np.size(Teff))**0.5
     sigmay=(sum((TbObs-np.mean(TbObs))**2)/np.size(Teff))**0.5
     r=xymean/sigmax/sigmay
-    #print(xymean, sigmax, sigmay,r)
 
     #Compute regression between Teff and TbObs
     regr = linear_model.LinearRegression(fit_intercept = False) #fit_intercept = false : to force the intercept to 0
@@ -56,12 +64,18 @@ def ComputeCorr(Tz_gr,H,Depths,TsMin, TsMax,Subsample):
     m=np.stack(((Emissivity-np.mean(Emissivity))/np.std(Emissivity), (Teff-np.mean(Teff))/np.std(Teff)), axis=0)
     m1=np.stack(((Emissivity-np.mean(Emissivity))/np.std(Emissivity), (Slopes-np.mean(Slopes))/np.std(Slopes)), axis=0)
     m2=np.stack(((Teff-np.mean(Teff))/np.std(Teff), (Slopes-np.mean(Slopes))/np.std(Slopes)), axis=0)
+    #obs = np.array([np.arange(0, 25, 5), [43, 12, 89, 7, 103]])
 
     Cov=(np.cov(m))[0,1]
     Cov1=(np.cov(m1))[0,1]
     Cov2=(np.cov(m2))[0,1]
 
     print("Covariance: ", Cov, Cov1, Cov2)
+
+    m=np.stack((Emissivity/np.std(Emissivity), Teff/np.std(Teff)), axis=0)
+    Chi2, p, dof, ex = chi2(m)
+    print(Chi2)
+
 
     #Correction for the non independence of variables
     #Emissivity=Emissivity-rEmissTeff*regr.coef_#Tbmod/Teff
@@ -78,12 +92,12 @@ def ComputeCorr(Tz_gr,H,Depths,TsMin, TsMax,Subsample):
     plt.xlabel("TbObs")
     plt.ylabel("Tbmod")'''
 
-    plt.scatter(Emissivity,Slopes,s=0.5, c=Teff, cmap=cmap, norm=norm)
-    plt.show()
+    #plt.scatter(Emissivity,Teff,s=0.5, cmap=cmap, norm=norm)
+    #plt.show()
 
     J1=sum((Tbmod-TbObs)**2)
-    J2=np.size(Emissivity[Emissivity>1])/np.size(Emissivity)
-    #J2=sum((Emissivity[Emissivity>1]-1)**2)
+    #J2=np.size(Emissivity[Emissivity>1])/np.size(Emissivity)
+    J2=sum((Emissivity[Emissivity>1]-1)**2)
     #J1=sum(((Tbmod-TbObs)/np.std(Tbmod))**2)/np.size(Tbmod)
     #J2=sum((Emissivity-np.mean(Emissivity))**2)
     #[Emissivity>=1.0]
@@ -91,7 +105,7 @@ def ComputeCorr(Tz_gr,H,Depths,TsMin, TsMax,Subsample):
         J2=sum(((Emissivity[Emissivity>=1.0]-1)/(np.std(Emissivity))**2))#/np.size(Emissivity[Emissivity>=1.0])
     else:
         J2=0'''
-    return Teff, J1, J2, regr.coef_, r**2, 100*np.std(Emissivity), Cov
+    return Teff, J1, J2, regr.coef_, r**2, 100*np.std(Emissivity), Cov, Cov1, Cov2, Chi2
 
 # Import SMOS data
 print("Load data")
@@ -103,7 +117,7 @@ Mask = Obs.variables['mask']
 Tb=Tb[0]
 
 # Import temperature data
-GRISLI = netCDF4.Dataset('../../SourceData/WorkingFiles/TB40S123_1_Corrected4TsandTb.nc')
+GRISLI = netCDF4.Dataset('../../SourceData/WorkingFiles/TB40S123_1_Corrected4Ts.nc')
 H = np.array(GRISLI.variables['H'])
 S = np.array(GRISLI.variables['S'])
 Zeta = GRISLI.variables['Zeta']
@@ -114,13 +128,13 @@ Ts=Tz_gr[:,:,0]
 SSlopes=netCDF4.Dataset('../../SourceData/WorkingFiles/SurfaceSlopesOnSMOS.nc')
 GradS = SSlopes.variables['Slopes']
 
-TsMax=-52.5
-TsMin=-55
+TsMax=-50
+TsMin=-54
 Subsample=1
 LayerThick=10
 
 #Determine which Depth is the best one
-Depths=np.arange(300,500,50)
+Depths=np.arange(50,1500,100)
 ReducedDepths=np.arange(0.01,1,0.025)
 #Alpha=np.arange(0,-1e6,-1e4)
 
@@ -131,7 +145,9 @@ Coeffs = []
 Scores=[]
 StdEmiss=[]
 Cov=[]
-
+Cov1=[]
+Cov2=[]
+TestIndep=[]
 '''for rd in ReducedDepths:
     Data=ComputeCorrReduced(Tz_gr, H, rd, TsMin, TsMax, Subsample)
     J1.append(Data[1])
@@ -150,6 +166,9 @@ for d in Depths:
     Scores.append(Data[4])
     StdEmiss.append(Data[5])
     Cov.append(Data[6])
+    Cov1.append(Data[7])
+    Cov2.append(Data[8])
+    TestIndep.append(Data[9])
     #print((max(J1)-min(J1))/(max(J2)-min(J2)))
     #Jtot=J1[-1]+a*J2[-1]
     #print(a,d,Jtot)
@@ -162,11 +181,15 @@ J2=(J2-min(J2))/(max(J2)-min(J2))
 
 #Jtot=(J1+J2)/2
 
-plt.plot(Depths,J1,c="b", label="J1: Teff-Tb")
+plt.plot(Depths,J1,c="b", label="J1: Tbmod-Tbobs")
 plt.plot(Depths,J2,c="r", label="J2: Emiss-1")
-plt.plot(Depths,Scores,c="purple", label='Explained variance r$^2$')
+plt.plot(Depths,Scores,c="purple", label='Explained variance')
 #plt.plot(Depths,Coeffs,c="orange", label='Mean emissivity')
-plt.plot(Depths,Cov,c="pink", label='Cov. Emiss/Teff')
+#plt.plot(Depths,Cov,c="pink", label='Cov. Emiss/Teff')
+#plt.plot(Depths,Cov1, label='Cov. Emiss/Slopes')
+#plt.plot(Depths,Cov2, label='Cov. Teff/Slopes')
+plt.plot(Depths,TestIndep,c="pink", label='Chi2Test Emiss vs Teff')
+
 '''plt.plot(ReducedDepths,J1,c="b", label="J1: Teff-Tb")
 plt.plot(ReducedDepths,J2,c="r", label="J2: Emiss-1")
 plt.plot(ReducedDepths,Scores,c="purple", label='Explained variance r$^2$')

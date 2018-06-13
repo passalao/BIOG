@@ -83,21 +83,25 @@ problem.types[:] = Real(100, 500)
 problem.function = ComputeJ
 
 algorithm = NSGAII(problem)
-algorithm.run(1)
+
+Start=time.time()
+algorithm.run(10000)
+Stop=time.time()
+
+print(Stop-Start,"s")
 
 fig = plt.figure()
 ax = fig.add_subplot(111, projection='3d')
 
 #norm = mpl.colors.Normalize(vmin=0.95, vmax=1)
 #cbar.ax.set_xticklabels(['0.95', '0.96', '0.97', '0.98', '0.99', '1.0'])
-
 myplot=ax.scatter([s.objectives[0] for s in algorithm.result],
            [s.objectives[1] for s in algorithm.result],
-           [s.objectives[2] for s in algorithm.result], c=RandomPath)
+           [s.objectives[2] for s in algorithm.result])#, c=RandomPath)
 
 #myplot=plt.scatter([s.objectives[0] for s in algorithm.result], [s.objectives[1] for s in algorithm.result], c=RandomPath)
-cbar = fig.colorbar(myplot, ticks=np.arange(200, 800, 100))
-cbar.set_label('Depth', rotation=270)
+#cbar = fig.colorbar(myplot, ticks=np.arange(200, 800, 100))
+#cbar.set_label('Depth', rotation=270)
 ax.set_xlabel("J1")
 ax.set_ylabel("J2")
 ax.set_zlabel("Cov")

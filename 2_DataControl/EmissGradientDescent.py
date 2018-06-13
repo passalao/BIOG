@@ -24,14 +24,14 @@ def gradientDescent(x, y, theta, alpha, m, numIterations, H, TsMin, TsMax, Subsa
         e1=theta[1]
 
         J = ComputeJ(x, H, [e0,e1], TsMin, TsMax, Subsample)
-        #J_e1=ComputeJ(x, H, [e0+alpha[0],e1],TsMin, TsMax, Subsample)
+        J_e1=ComputeJ(x, H, [e0+alpha[0],e1],TsMin, TsMax, Subsample)
         J_e2=ComputeJ(x, H, [e0,e1++alpha[1]],TsMin, TsMax, Subsample)
-        #dJde1 = J_e1 - J
+        dJde1 = J_e1 - J
         dJde2 = J_e2 - J
 
-        GradJ=np.array([0,dJde2/alpha[1]])
-        theta = theta - alpha*GradJ#np.array([dJdl, dJdlam])#+ GradJ*J #alpha*GradJ
-        print(J, theta)
+        GradJ=np.array([dJde1/alpha[0],dJde2/alpha[1]])
+        theta = [min(2.4e-4,max(0.6e-4,theta[0] - alpha[0]*GradJ[0])),min(0.1,max(0.02,theta[1] - alpha[1]*GradJ[1]))] #np.array([dJdl, dJdlam])#+ GradJ*J #alpha*GradJ
+        print(J, theta, GradJ)
     return theta
 
 def Permittivity(Model,T, D, Freq):
@@ -108,14 +108,14 @@ Zeta = GRISLI.variables['Zeta']
 Tz_gr = GRISLI.variables['T']
 Ts=Tz_gr[:,:,0]
 
-TsMax=-40
-TsMin=-45
+TsMax=-45
+TsMin=-50
 Subsample=1
 LayerThick=10
 
 numIterations= 50
 #Explore the (epsilon0, epsilon1) space
 #where epsilon=epsilon0+T*epsilon1
-alpha = [0.2e-7,1e-3] #Steps
-theta = [2e-4, 0.05]#2 variables : depth l and lagrangian multiplier lambda
-theta = gradientDescent(Tz_gr, Tb, theta, alpha, n, numIterations, H, TsMin, TsMax, Subsample)
+alpha = [1e-9,1e-4] #Steps
+theta = [1.1e-4, 0.04]#2 variables :
+theta_final = gradientDescent(Tz_gr, Tb, theta, alpha, n, numIterations, H, TsMin, TsMax, Subsample)
