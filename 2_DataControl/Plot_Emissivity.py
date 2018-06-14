@@ -9,7 +9,7 @@ sys.path.insert(0, "/home/passalao/Documents/SMOS-FluxGeo/BIOG")
 import BIOG
 
 # Import temperature data
-Emiss = netCDF4.Dataset('../../SourceData/WorkingFiles/Emissivity.nc')
+Emiss = netCDF4.Dataset('../../SourceData/WorkingFiles/Emissivity2.nc')
 E = np.array(Emiss.variables['Emissivity'])
 
 # Import SMOS data
@@ -41,8 +41,8 @@ EMatzler=[0.956,0.982,0.947,0.974,0.953,0.981,0.986,0.963]
 EGRISLI=[E[int(j),int(i)] for i,j in zip(XpixS, 201-YpixS)]
 
 fig=plt.figure()
-ax=fig.add_subplot(1,2,1)
-[ax.scatter(et, eg, label=site) for site, et, eg in zip(SitesS, ETiuri, EGRISLI)]
+#ax=fig.add_subplot(1,2,1)
+[plt.scatter(et, eg, label=site) for site, et, eg in zip(SitesS, ETiuri, EGRISLI)]
 plt.ylabel("Emissivity from GRISLI and regression model")
 plt.xlabel("Emissivity from boreholes and Tiuri")
 plt.grid()
@@ -51,14 +51,14 @@ plt.axis("equal")
 plt.xlim(0.96,1)
 plt.ylim(0.96,1)
 
-ax=fig.add_subplot(1,2,2)
+'''ax=fig.add_subplot(1,2,2)
 [ax.scatter(et, eg, label=site) for site, et, eg in zip(SitesS, EMatzler, EGRISLI)]
 plt.xlabel("Emissivity from boreholes and Mätzler")
 plt.plot([0,1],[0,1], c='r')
 plt.axis("equal")
 plt.xlim(0.96,1)
 plt.ylim(0.96,1)
-plt.grid()
+plt.grid()'''
 
 plt.legend()
 plt.show()

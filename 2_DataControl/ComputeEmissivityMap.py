@@ -18,9 +18,9 @@ def ComputeEmissivity(Zeta, H, Tz_gr, Tb, Ts):
             #Depth=0.78*math.exp(-0.12*Ts[i,j])
             #Depth=(-0.0116*Ts[i,j]-0.0327)*H[i,j]#When using reduced depth
             #Depth=(-Ts[i,j]-28.89)/0.0756
-            '''if Ts[i, j] > -55 and Ts[i, j] < -50 :
+            if Ts[i, j] < -50 :
                 Depth=950
-                Depth= 200
+                Depth= 300
 
             if Ts[i, j] > -50 and Ts[i, j] < -45:
                 Depth = 600
@@ -28,7 +28,7 @@ def ComputeEmissivity(Zeta, H, Tz_gr, Tb, Ts):
 
             if Ts[i, j] > -45 and Ts[i, j] < -40 :
                 Depth=375
-                Depth= 200
+                Depth= 150
 
             if Ts[i, j] > -40 and Ts[i, j] < -35:
                 Depth = 325
@@ -36,7 +36,8 @@ def ComputeEmissivity(Zeta, H, Tz_gr, Tb, Ts):
 
             if Ts[i, j] > -35:
                 Depth = 250
-                Depth= 50'''
+                Depth= 50
+
             Teff[i,j]=273.15 + sum(Tz_gr[i, j] * np.exp(-(1 - Zeta[i, j]) * H[i, j] / Depth) * 0.05 * H[i, j] / Depth)/ sum(np.exp(-(1 - Zeta[i, j]) * H[i, j] / Depth) * 0.05 * H[i, j] / Depth)
             Emissivity[i,j]=Tb[i,j]/Teff[i,j]
     return Emissivity
@@ -71,7 +72,7 @@ cbar.ax.set_xticklabels(['0.95', '0.96', '0.97', '0.98', '0.99', '1.0'])
 plt.show()
 
 #Write output NetCDF file
-outfile = r'../../SourceData/WorkingFiles/Emissivity.nc'
+outfile = r'../../SourceData/WorkingFiles/Emissivity2.nc'
 cols = np.shape(H)[1]
 rows = np.shape(H)[0]
 dsout = netCDF4.Dataset(outfile, 'w', clobber=True)
