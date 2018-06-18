@@ -12,16 +12,20 @@ import scipy.special as special
 import sys, time
 sys.path.insert(0, "/home/passalao/Documents/SMOS-FluxGeo/BIOG")
 import BIOG
+from platypus import NSGAII, Problem, Real
 
-def ComputeJ(Tz_gr,H,Depths,f,TsMin, TsMax,Subsample):
+
+def ComputeJ(vars):#Tz_gr,H,Depths,f,TsMin, TsMax,Subsample):
     Teff = []
     TbObs=[]
+    Depth=vars[0]
+    f=vars[1]
     #Tbmod=[]
-
+    print(Depth,f)
     for i in np.arange(0,np.shape(H)[0], Subsample):
         for j in np.arange(0,np.shape(H)[1], Subsample):
             if Ts[i,j]>TsMin and Ts[i,j]<TsMax and H[i,j]>10:
-                Teff.append(273.15+sum(Tz_gr[i,j]*np.exp(-(1-Zeta[i,j])*H[i,j]/Depths[i,j])*0.05*H[i,j]/Depths[i,j])/sum(np.exp(-(1-Zeta[i,j])*H[i,j]/Depths[i,j])*0.05*H[i,j]/Depths[i,j]))
+                Teff.append(273.15+sum(Tz_gr[i,j]*np.exp(-(1-Zeta[i,j])*H[i,j]/Depth)*0.05*H[i,j]/Depth)/sum(np.exp(-(1-Zeta[i,j])*H[i,j]/Depth)*0.05*H[i,j]/Depth))
                 TbObs.append(Tb[i,j])
     Teff=np.array(Teff)
     TbObs=np.array(TbObs)
@@ -43,10 +47,11 @@ def ComputeJ(Tz_gr,H,Depths,f,TsMin, TsMax,Subsample):
 
     J1=sum((Tbmod-TbObs)**2)/np.std(TbObs)**2
     J2=sum((Emissivity-np.mean(Emissivity))**2)
-    print("Mean E:", np.mean(Emissivity))
     J3=sum((Emissivity[Emissivity>1]-1)**2)#/np.std(Emissivity)**2
+    #Costs.append([J1,J2,J3])
+    #RandomPath.append([Depth, f])
 
-    return Teff, J1, J2, Cov, regr.coef_
+    return J1, J2, (Cov**2)**0.5
 
 # Import SMOS data
 print("Load data")
@@ -65,41 +70,71 @@ Zeta = GRISLI.variables['Zeta']
 Tz_gr = GRISLI.variables['T']
 Ts=Tz_gr[:,:,0]
 
-#Import Slope data
-SSlopes=netCDF4.Dataset('../../SourceData/WorkingFiles/SurfaceSlopesOnSMOS.nc')
-GradS = SSlopes.variables['Slopes']
-
 TsMax=-50
-TsMin=-54
+TsMin=-55
 Subsample=1
 LayerThick=10
 
-#Determine which Depth is the best one
-Depth=np.arange(300,1600,250)
-#Emiss=np.arange(0.90,1.01,0.025)
-frac=np.arange(0,1.0,0.25)#donne le pourcentage d'éloignement à l'émissivité moyenne
-#Si frac=0 =>J2 est minimisé, on minimise J1 ensuite
-#Si frac=1 => J1 est minimisé (même nul en fait) et on essaye de minimiser J2
+'''#Optimisation avec Platypus
+RandomPath=[]
+Costs=[]
+problem = Problem(2, 3)
+problem.types[:] = [Real(0, 900), Real(0, 1)]
+problem.function = ComputeJ
 
-J1 = np.zeros((np.size(Depth), np.size(frac)))
-J2 = np.zeros((np.size(Depth), np.size(frac)))
-Cov= np.zeros((np.size(Depth), np.size(frac)))
+algorithm = NSGAII(problem)
+Start=time.time()
+algorithm.run(500)
+Stop=time.time()
+
+
+fig = plt.figure()
+ax = fig.add_subplot(111, projection='3d')
+#norm = mpl.colors.Normalize(vmin=0.95, vmax=1)
+#cbar.ax.set_xticklabels(['0.95', '0.96', '0.97', '0.98', '0.99', '1.0'])
+myplot=ax.scatter([s.objectives[0] for s in algorithm.result],
+           [s.objectives[1] for s in algorithm.result],
+           [s.objectives[2] for s in algorithm.result])#, c=RandomPath)
+#cbar = fig.colorbar(myplot, ticks=np.arange(200, 800, 100))
+#cbar.set_label('Depth', rotation=270)
+ax.set_xlabel("J1")
+ax.set_ylabel("J2")
+ax.set_zlabel("J3")
+#plt.grid()
+plt.show()
+
+plt.plot(np.arange(0,np.size(RandomPath[0])), RandomPath[0])
+plt.show()
+plt.plot(np.arange(0,np.size(RandomPath[1])), RandomPath[1])
+plt.show()'''
+
+#Optimisation manuelle
+Depth=np.arange(600,1301,200)
+frac=np.arange(0.1,0.9,0.25)#donne le pourcentage d'éloignement à l'émissivité moyenne
+
+l1=np.size(Depth)
+l2=np.size(frac)
+J1 = np.zeros((l1, l2))
+J2 = np.zeros((l1, l2))
+J3 = np.zeros((l1, l2))
+Cov= np.zeros((l1, l2))
 print(np.shape(J1))
 u=0
 for d in Depth:
     v = 0
     for f in frac:
-        print(u,v)
-        D=np.ones(np.shape(H))*d
-        Data=ComputeJ(Tz_gr, H, D, f, TsMin, TsMax, Subsample)
-        J1[u,v]=Data[1]
-        J2[u,v]=Data[2]
-        Cov[u,v]=Data[3]
+        vars=[d,f]
+        print(d,f)
+        #D=np.ones(np.shape(H))*d
+        Data=ComputeJ(vars)#Tz_gr, H, D, f, TsMin, TsMax, Subsample)
+        J1[u,v]=max(-1e316,min(1e316,Data[0]))
+        J2[u,v]=max(-1e316,min(1e316,Data[1]))
+        J3[u,v]=max(-1e316,min(1e316,Data[2]))
         v=v+1
     u = u + 1
 
-J1=np.array(J1)
-J2=np.array(J2)
+print("J2",J2)
+print("J3",J3)
 
 #Compute dJ/dx
 def ComputeGrad(J,X, axis):
@@ -111,27 +146,56 @@ def ComputeGrad(J,X, axis):
     if axis==1:
         for i in np.arange(0,np.shape(dJdx)[axis],1):
             dJdx[:,i] = (J[1:-1,i + 1] - J[1:-1,i - 1]) / (2*dx)
-            print(J[1:-1,i + 1], J[1:-1,i - 1])
     return dJdx
 
 dJ1dL=ComputeGrad(J1,frac,0)
 dJ2dL=ComputeGrad(J2,frac,0)
-Lambda1=-dJ1dL/dJ2dL
+dJ3dL=ComputeGrad(J3,frac,0)
 
 dJ1de=ComputeGrad(J1,frac,1)
 dJ2de=ComputeGrad(J2,frac,1)
-Lambda2=-dJ1de/dJ2de
-print(Lambda1,Lambda2)
+dJ3de=ComputeGrad(J3,frac,1)
+Lambdas=np.zeros(np.shape(dJ1dL))
+Mus=np.zeros(np.shape(dJ1dL))
 
-#J1=(J1-min(J1))/(max(J1)-min(J1))
-#J2=(J2-min(J2))/(max(J2)-min(J2))
+i=0
+for u in dJ1dL:
+    j=0
+    for v in u:
+        A=np.matrix([[dJ2de[i,j],dJ3de[i,j]],[dJ2dL[i,j],dJ3dL[i,j]]])
+        B=np.matrix([[dJ1de[i,j]],[dJ1dL[i,j]]])
+        print(A,np.linalg.inv(A))
+        X=np.linalg.solve(A,-B)#np.dot(np.linalg.inv(A),-B)
+        Lambdas[i,j]=X[0,0]
+        Mus[i, j] = X[1, 0]
+        j=j+1
+    i=i+1
+
+print("Lambdas", Lambdas)
+print("Mus:", Mus)
+
+#Choose the depth so that J3=0 (or J3=min(J3)
+'''i,j = np.unravel_index(np.argmin(J3),J3.shape)
+m=[k for k, l in enumerate(J2[i,:]) if l == min(J2[i,:])]
+Lambda=Lambdas[i-1,m[0]-1]
+Mu=Mus[i-1,m[0]-1]'''
+
+Score=Lambdas**2*J2[1:-1,1:-1]**2+Mus**2*J3[1:-1,1:-1]**2
+i,m = np.unravel_index(np.argmin(Score),Score.shape)
+Lambda=Lambdas[i,m]
+Mu=Mus[i,m]
+
+J=J1+Lambda*J2+Mu*J3
+u,v = np.unravel_index(np.argmin(J),J.shape)
+print("Best solution:", Depth[u], frac[v])
 
 fig = plt.figure()
 ax = fig.add_subplot(111, projection='3d')
 X, Y = np.meshgrid(frac, Depth)
-plt.contour(X, Y, J1+Lambda2*J2, 25)#np.arange(0,1e6,2e4))
+plt.contour(X, Y, J, 25)#J1+3e4* np.arange(0,1e6,2e4)) marche avec 1e4 pour chacun
 ax.set_ylabel("Depth")
 ax.set_xlabel("Emissivity")
-ax.set_zlabel("J1+$\lambda$J2")
+ax.set_zlabel("J")
 plt.grid()
 plt.show()
+
