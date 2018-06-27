@@ -47,9 +47,16 @@ def ComputeJ(vars):#Tz_gr,H,Depths,f,TsMin, TsMax,Subsample):
 
     J1=sum((Tbmod-TbObs)**2)/np.std(TbObs)**2
     J2=sum((Emissivity-np.mean(Emissivity))**2)
-    J3=sum((Emissivity[Emissivity>1]-1)**2)#/np.std(Emissivity)**2
+    #J3=sum((Emissivity[Emissivity>1]-1)**2)#/np.std(Emissivity)**2
     #Costs.append([J1,J2,J3])
     #RandomPath.append([Depth, f])
+
+    #Compute explained variance
+    xymean=sum((Tbmod-np.mean(Tbmod))*(TbObs-np.mean(TbObs)))/np.size(Tbmod)
+    sigmax=(sum((Tbmod-np.mean(Tbmod))**2)/np.size(Tbmod))**0.5
+    sigmay=(sum((TbObs-np.mean(TbObs))**2)/np.size(Tbmod))**0.5
+    r=xymean/sigmax/sigmay
+    #print("explained variance:",r, r**2)
 
     return J1, J2, (Cov**2)**0.5
 
@@ -70,8 +77,8 @@ Zeta = GRISLI.variables['Zeta']
 Tz_gr = GRISLI.variables['T']
 Ts=Tz_gr[:,:,0]
 
-TsMax=-50
-TsMin=-55
+TsMax=-40
+TsMin=-45
 Subsample=1
 LayerThick=10
 
@@ -109,8 +116,8 @@ plt.plot(np.arange(0,np.size(RandomPath[1])), RandomPath[1])
 plt.show()'''
 
 #Optimisation manuelle
-Depth=np.arange(600,1301,200)
-frac=np.arange(0.1,0.9,0.25)#donne le pourcentage d'éloignement à l'émissivité moyenne
+Depth=np.arange(200,400,25)
+frac=np.arange(0.45,0.6,0.05)#donne le pourcentage d'éloignement à l'émissivité moyenne
 
 l1=np.size(Depth)
 l2=np.size(frac)

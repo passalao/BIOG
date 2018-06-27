@@ -14,32 +14,37 @@ def ComputeEmissivity(Zeta, H, Tz_gr, Tb, Ts):
 
     for i in np.arange(0, np.shape(H)[0]):
         for j in np.arange(0, np.shape(H)[1]):
-            Depth=3.8*math.exp(-0.105*Ts[i,j])
-            #Depth=0.78*math.exp(-0.12*Ts[i,j])
-            #Depth=(-0.0116*Ts[i,j]-0.0327)*H[i,j]#When using reduced depth
-            #Depth=(-Ts[i,j]-28.89)/0.0756
-            if Ts[i, j] < -50 :
+            Depth=3.7*math.exp(-0.106*Ts[i,j])
+            f=0.57
+            '''if Ts[i, j] < -50 :
                 Depth=950
                 Depth= 300
+                ebarre=0.954
 
             if Ts[i, j] > -50 and Ts[i, j] < -45:
                 Depth = 600
                 Depth= 200
+                ebarre = 0.966
 
             if Ts[i, j] > -45 and Ts[i, j] < -40 :
                 Depth=375
                 Depth= 150
+                ebarre = 0.974
 
             if Ts[i, j] > -40 and Ts[i, j] < -35:
                 Depth = 325
                 Depth= 100
+                ebarre = 0.977
 
             if Ts[i, j] > -35:
                 Depth = 250
                 Depth= 50
-
+                ebarre = 0.982'''
+            ebarre=-5.54*1e-5*Ts[i, j]**2-0.003379*Ts[i, j]+0.9298
             Teff[i,j]=273.15 + sum(Tz_gr[i, j] * np.exp(-(1 - Zeta[i, j]) * H[i, j] / Depth) * 0.05 * H[i, j] / Depth)/ sum(np.exp(-(1 - Zeta[i, j]) * H[i, j] / Depth) * 0.05 * H[i, j] / Depth)
-            Emissivity[i,j]=Tb[i,j]/Teff[i,j]
+            #Emissivity[i,j]=Tb[i,j]/Teff[i,j]
+            ebound=Tb[i,j]/Teff[i,j]
+            Emissivity[i, j] = ebarre*(1-f)+ebound*f
     return Emissivity
 
 # Import SMOS data
