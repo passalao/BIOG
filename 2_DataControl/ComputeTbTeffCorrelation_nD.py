@@ -13,6 +13,7 @@ import sys, time
 sys.path.insert(0, "/home/passalao/Documents/SMOS-FluxGeo/BIOG")
 import BIOG
 from platypus import NSGAII, Problem, Real
+#np.set_printoptions(threshold=np.nan)
 
 #Compute dJ/dx
 def ComputeGrad(J,dx, axis):
@@ -27,32 +28,47 @@ def ComputeGrad(J,dx, axis):
     return dJdx
 
 def ComputeLagComponents(Depth, E):#Tz_gr,H,Depths,f,TsMin, TsMax,Subsample):
-    Teff = []
+    '''Teff = []
     TbObs=[]
-    Emissivity=[]
+    Emissivity=[]'''
+    Teff=np.zeros(np.shape(E))
+    TbObs=np.zeros(np.shape(E))
+    Mask=np.zeros(np.shape(E))
+    #Emissivity=np.zeros(np.shape(E))
 
     for i in np.arange(0,np.shape(H)[0], Subsample):
         for j in np.arange(0,np.shape(H)[1], Subsample):
             if Ts[i,j]>TsMin and Ts[i,j]<TsMax and H[i,j]>10:
-                Teff.append(273.15+sum(Tz_gr[i,j]*np.exp(-(1-Zeta[i,j])*H[i,j]/Depth)*0.05*H[i,j]/Depth)/sum(np.exp(-(1-Zeta[i,j])*H[i,j]/Depth)*0.05*H[i,j]/Depth))
-                TbObs.append(Tb[i,j])
-                Emissivity.append(E[i,j])
-    Teff=np.array(Teff)
-    TbObs=np.array(TbObs)
-    Emissivity=np.array(Emissivity)
-    Teff=Teff[TbObs < 1e45]
-    Emissivity = Emissivity[TbObs < 1e45]
-    TbObs = TbObs[TbObs < 1e45]
+                Teff[i,j]=273.15+sum(Tz_gr[i,j]*np.exp(-(1-Zeta[i,j])*H[i,j]/Depth)*0.05*H[i,j]/Depth)/sum(np.exp(-(1-Zeta[i,j])*H[i,j]/Depth)*0.05*H[i,j]/Depth)
+                #Teff.append(273.15+sum(Tz_gr[i,j]*np.exp(-(1-Zeta[i,j])*H[i,j]/Depth)*0.05*H[i,j]/Depth)/sum(np.exp(-(1-Zeta[i,j])*H[i,j]/Depth)*0.05*H[i,j]/Depth))
+                Mask[i,j]=1
+                #TbObs.append(Tb[i,j])
+                #Emissivity.append(E[i,j])
+    TbObs=Tb*Mask
+    #Teff=np.array(Teff)
+    #TbObs=np.array(TbObs)
+    #Emissivity=np.array(Emissivity)
+    #Emissivity = Emissivity[TbObs < 1e45]
+    #TbObs = TbObs[TbObs < 1e45]
+
     Tbmod=Emissivity*Teff
 
-    J1=sum((Tbmod-TbObs)**2)/np.std(TbObs)**2
-    J2=sum((Emissivity-np.mean(Emissivity))**2)
+    Teff1D=np.reshape(Teff, (1,np.size(Teff)))[0,:]
+    Tbmod1D=np.reshape(Tbmod, (1,np.size(Tbmod)))[0,:]
+    TbObs1D=np.reshape(TbObs, (1,np.size(TbObs)))[0,:]
+    Emiss1D=np.reshape(Emissivity, (1,np.size(Emissivity)))[0,:]
+
+    Test=(Tbmod1D[Tbmod1D!=0]-TbObs1D[Tbmod1D!=0])**2
+
+    J1=np.sum((Tbmod1D[Tbmod1D!=0]-TbObs1D[Tbmod1D!=0])**2)/np.std(TbObs1D[Tbmod1D!=0])**2
+    J2=np.sum((Emiss1D[Emiss1D!=0]-np.mean(Emiss1D[Emiss1D!=0]))**2)
 
     #Compute normalized covariance = correlation
-    m=np.stack(((Emissivity-np.mean(Emissivity))/np.std(Emissivity), (Teff-np.mean(Teff))/np.std(Teff)), axis=0)
+    m=np.stack(((Emiss1D-np.mean(Emiss1D))/np.std(Emiss1D), (Teff1D-np.mean(Teff1D))/np.std(Teff1D)), axis=0)
+
     J3=(((np.cov(m))[0,1])**2)**0.5
 
-    return J1, J2, J3, Teff, Tbmod, TbObs, Emissivity
+    return J1, J2, J3, Teff, Tbmod, TbObs, Teff1D, Tbmod1D, TbObs1D, Emiss1D, Mask
 
 # Import SMOS data
 print("Load data")
@@ -81,48 +97,59 @@ frac=np.arange(0.45,0.6,0.05)#donne le pourcentage d'éloignement à l'émissivi
 
 DeltaLag=1e10
 Lag=1e10
-Depth=300
-Emissivity=np.random.normal(0.98, 0.005, np.size(Ts))
+Depth=387
+Emissivity=np.random.normal(0.97, 0.005, np.size(Ts))
 Emissivity=np.reshape(Emissivity,(np.shape(Ts)))
 NewEmiss=Emissivity
-print(Emissivity)
-
-#Todo gérer la transformation 2D/1D : ne plus travailler que sur du 1D
+Lambda=-1e3
+Mu=1e6
+dL=25
+dE=0.005
+stepLambda=1e2
+stepMu=1e5
+stepE=1e-6
+stepL=10
 
 #Now gradient descent
-while DeltaLag>100:
+while abs(DeltaLag)>1:
+    print(Depth, Emissivity[150,150], Lambda, Mu)
     OldLag=Lag
     Emiss1D=NewEmiss
     #1 Compute the basic components we need for the lagrangian
     Attempt1 = ComputeLagComponents(Depth, Emissivity)
-    J1=max(-1e316,min(1e316,Attempt1[0]))
-    J2=max(-1e316,min(1e316,Attempt1[1]))
-    J3=max(-1e316,min(1e316,Attempt1[2]))
+    J1=Attempt1[0] #max(-1e316,min(1e316,Attempt1[0]))
+    J2=Attempt1[1] #max(-1e316,min(1e316,Attempt1[1]))
+    J3=Attempt1[2] #max(-1e316,min(1e316,Attempt1[2]))
     Teff=Attempt1[3]
     Tbmod=Attempt1[4]
     TbObs = Attempt1[5]
-    Emiss1D = Attempt1[6]
+    Teff1D=Attempt1[6]
+    Tbmod1D=Attempt1[7]
+    TbObs1D = Attempt1[8]
+    Emiss1D = Attempt1[9]
+    Mask = Attempt1[10]
 
-    #2 Compute mu, and lambda
-    dL=25.
+    N=np.size(Emiss1D)
+
+    #2 Compute the gradients
     Attempt2=ComputeLagComponents(Depth+dL, Emissivity)
-    dJ1dL=(max(-1e316,min(1e316,Attempt2[0]))-J1)/dL
-    dJ2dL=(max(-1e316,min(1e316,Attempt2[1]))-J2)/dL
-    dJ3dL = (max(-1e316, min(1e316, Attempt2[2])) - J3) / dL
-    mu=-dJ1dL/dJ3dL
-    N=np.size(TbObs)
-    Lambdas=0.5*((-2*Teff*(Tbmod-TbObs)-mu/N*(Teff-np.mean(Teff)))/(Emiss1D-np.mean(Emiss1D))-mu/N*Tbmod)
-    Lambda2=Lambdas**2
-    itemindex = np.where(Lambda2==min(Lambda2))
-    Lambda=Lambdas[itemindex]
+    dJ1dL=(Attempt2[0]-J1)/dL
+    dJ2dL=(Attempt2[1]-J2)/dL
+    dJ3dL = (Attempt2[2] - J3) / dL
+    dLagdL=dJ1dL+Lambda*dJ2dL+Mu*dJ3dL
+    dLdE=2*Teff*(Tbmod-TbObs)+Mu/N*(Teff-np.mean(Teff)*Mask)+(2*Lambda+Mu/N*Tbmod)*(Emissivity-np.mean(Emiss1D)*Mask)
 
-    dLde=2*Teff*(Tbmod-TbObs)+mu/N*(Teff-np.mean(Teff))+(2*Lambda+mu/N*Tbmod)*(Emiss1D-np.mean(Emiss1D))
+    #TODO : calculer dJde comme pour dJdL, histoire de comparer...
+    #print(dJ1)
+    #Compute the new free RVs
+    #Mu=Mu-J3*stepMu
+    #Lambda=Lambda-J2*stepLambda
+    Emissivity=Emissivity-dLdE*stepE
+    #Depth=Depth-dLagdL*stepL
 
-    print(dLde)
-
-    dE=5e-8
-    NewEmiss=Emiss1D+dE*dLde
-    print(NewEmiss)
+    Lag=J1+Lambda*J2+Mu*J3
+    DeltaLag=Lag-OldLag
+    print("Lagrangien:", Lag, J1, J2, J3)
 
 dJ1dL=ComputeGrad(J1,frac,0)
 dJ2dL=ComputeGrad(J2,frac,0)
