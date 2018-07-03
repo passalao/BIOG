@@ -77,8 +77,8 @@ Zeta = GRISLI.variables['Zeta']
 Tz_gr = GRISLI.variables['T']
 Ts=Tz_gr[:,:,0]
 
-TsMax=-40
-TsMin=-45
+TsMax=-45
+TsMin=-47.5
 Subsample=1
 LayerThick=10
 
@@ -116,8 +116,8 @@ plt.plot(np.arange(0,np.size(RandomPath[1])), RandomPath[1])
 plt.show()'''
 
 #Optimisation manuelle
-Depth=np.arange(200,400,25)
-frac=np.arange(0.45,0.6,0.05)#donne le pourcentage d'éloignement à l'émissivité moyenne
+Depth=np.arange(300,1200,100)
+frac=np.arange(0.45,0.70,0.05)#donne le pourcentage d'éloignement à l'émissivité moyenne
 
 l1=np.size(Depth)
 l2=np.size(frac)
@@ -180,21 +180,28 @@ for u in dJ1dL:
 
 print("Lambdas", Lambdas)
 print("Mus:", Mus)
-
+print("J1:", J1)
+print("J2:", J2)
+print("J3:", J3)
 #Choose the depth so that J3=0 (or J3=min(J3)
-'''i,j = np.unravel_index(np.argmin(J3),J3.shape)
-m=[k for k, l in enumerate(J2[i,:]) if l == min(J2[i,:])]
-Lambda=Lambdas[i-1,m[0]-1]
-Mu=Mus[i-1,m[0]-1]'''
+i,n = np.unravel_index(np.argmin(J3),J3.shape)
 
-Score=Lambdas**2*J2[1:-1,1:-1]**2+Mus**2*J3[1:-1,1:-1]**2
-i,m = np.unravel_index(np.argmin(Score),Score.shape)
-Lambda=Lambdas[i,m]
-Mu=Mus[i,m]
+#m=[k for k, l in enumerate(J2[i,:]) if l == min(J2[i,:])]
+#Lambda=Lambdas[i-1,n-1]
+#Mu=Mus[i-1,n-1]
+
+Score=J1[1:-1,1:-1]+Lambdas*J2[1:-1,1:-1]#)+abs(Mus*J3[1:-1,1:-1])
+j,m = np.unravel_index(np.argmin(Score),Score.shape)
+print(i,m, Score[i-1,m], J3[i,m+1])
+Lambda=Lambdas[i-1,m]
+Mu=Mus[i-1,m]
+print("Score:", Score)
+print("Lambda : ", Lambda, "Mu : ",Mu)
 
 J=J1+Lambda*J2+Mu*J3
 u,v = np.unravel_index(np.argmin(J),J.shape)
-print("Best solution:", Depth[u], frac[v])
+print("Best solution:", Depth[u], frac[v], J[u,v], J1[u,v], J2[u,v], J3[u,v])
+print("J", J)
 
 fig = plt.figure()
 ax = fig.add_subplot(111, projection='3d')

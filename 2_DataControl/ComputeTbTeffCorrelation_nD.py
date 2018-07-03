@@ -27,31 +27,35 @@ def ComputeGrad(J,dx, axis):
             dJdx[:,i] = (J[1:-1,i + 1] - J[1:-1,i - 1]) / (2*dx)
     return dJdx
 
-def ComputeLagComponents(Depth, E):#Tz_gr,H,Depths,f,TsMin, TsMax,Subsample):
-    '''Teff = []
-    TbObs=[]
-    Emissivity=[]'''
-    Teff=np.zeros(np.shape(E))
-    TbObs=np.zeros(np.shape(E))
-    Mask=np.zeros(np.shape(E))
-    #Emissivity=np.zeros(np.shape(E))
+
+def ComputeEmissivity(Depth):#Tz_gr,H,Depths,f,TsMin, TsMax,Subsample):
+    Teff=np.zeros(np.shape(H))
+    TbObs=np.zeros(np.shape(H))
+    Mask=np.zeros(np.shape(H))
 
     for i in np.arange(0,np.shape(H)[0], Subsample):
         for j in np.arange(0,np.shape(H)[1], Subsample):
             if Ts[i,j]>TsMin and Ts[i,j]<TsMax and H[i,j]>10:
                 Teff[i,j]=273.15+sum(Tz_gr[i,j]*np.exp(-(1-Zeta[i,j])*H[i,j]/Depth)*0.05*H[i,j]/Depth)/sum(np.exp(-(1-Zeta[i,j])*H[i,j]/Depth)*0.05*H[i,j]/Depth)
-                #Teff.append(273.15+sum(Tz_gr[i,j]*np.exp(-(1-Zeta[i,j])*H[i,j]/Depth)*0.05*H[i,j]/Depth)/sum(np.exp(-(1-Zeta[i,j])*H[i,j]/Depth)*0.05*H[i,j]/Depth))
                 Mask[i,j]=1
-                #TbObs.append(Tb[i,j])
-                #Emissivity.append(E[i,j])
     TbObs=Tb*Mask
-    #Teff=np.array(Teff)
-    #TbObs=np.array(TbObs)
-    #Emissivity=np.array(Emissivity)
-    #Emissivity = Emissivity[TbObs < 1e45]
-    #TbObs = TbObs[TbObs < 1e45]
+    Emissivity=TbObs/Teff
+    Ebarre=np.mean(Emissivity)
+    Emissivity=(Emissivity+Ebarre)/2
+    return Emissivity
 
-    Tbmod=Emissivity*Teff
+def ComputeLagComponents(Depth, E):#Tz_gr,H,Depths,f,TsMin, TsMax,Subsample):
+    Teff=np.zeros(np.shape(E))
+    TbObs=np.zeros(np.shape(E))
+    Mask=np.zeros(np.shape(E))
+
+    for i in np.arange(0,np.shape(H)[0], Subsample):
+        for j in np.arange(0,np.shape(H)[1], Subsample):
+            if Ts[i,j]>TsMin and Ts[i,j]<TsMax and H[i,j]>10:
+                Teff[i,j]=273.15+sum(Tz_gr[i,j]*np.exp(-(1-Zeta[i,j])*H[i,j]/Depth)*0.05*H[i,j]/Depth)/sum(np.exp(-(1-Zeta[i,j])*H[i,j]/Depth)*0.05*H[i,j]/Depth)
+                Mask[i,j]=1
+    TbObs=Tb*Mask
+    Tbmod=E*Teff
 
     Teff1D=np.reshape(Teff, (1,np.size(Teff)))[0,:]
     Tbmod1D=np.reshape(Tbmod, (1,np.size(Tbmod)))[0,:]
@@ -61,11 +65,11 @@ def ComputeLagComponents(Depth, E):#Tz_gr,H,Depths,f,TsMin, TsMax,Subsample):
     Test=(Tbmod1D[Tbmod1D!=0]-TbObs1D[Tbmod1D!=0])**2
 
     J1=np.sum((Tbmod1D[Tbmod1D!=0]-TbObs1D[Tbmod1D!=0])**2)/np.std(TbObs1D[Tbmod1D!=0])**2
-    J2=np.sum((Emiss1D[Emiss1D!=0]-np.mean(Emiss1D[Emiss1D!=0]))**2)
+    J2=np.sum((Emiss1D[Emiss1D!=0]-np.mean(Emiss1D[Emiss1D!=0]))**2)#/np.std(Emiss1D[Emiss1D!=0])**2
 
     #Compute normalized covariance = correlation
-    m=np.stack(((Emiss1D-np.mean(Emiss1D))/np.std(Emiss1D), (Teff1D-np.mean(Teff1D))/np.std(Teff1D)), axis=0)
-
+    m=np.stack((Emiss1D, Teff1D), axis=0)
+    #/np.std(Emiss1D) et /np.std(Teff1D)
     J3=(((np.cov(m))[0,1])**2)**0.5
 
     return J1, J2, J3, Teff, Tbmod, TbObs, Teff1D, Tbmod1D, TbObs1D, Emiss1D, Mask
@@ -87,32 +91,34 @@ Zeta = GRISLI.variables['Zeta']
 Tz_gr = GRISLI.variables['T']
 Ts=Tz_gr[:,:,0]
 
-TsMax=-40
-TsMin=-45
+TsMax=-30
+TsMin=-35
 Subsample=1
 
 #Optimisation manuelle
-Depth=np.arange(200,400,25)
+Depth=np.arange(260,400,25)
 frac=np.arange(0.45,0.6,0.05)#donne le pourcentage d'éloignement à l'émissivité moyenne
 
 DeltaLag=1e10
 Lag=1e10
-Depth=387
+Depth=260
+#Emissivity=ComputeEmissivity(Depth)
+#Emissivity=Emissivity+np.reshape(np.random.normal(0, 0.005, np.size(Ts)),(np.shape(Ts)))
 Emissivity=np.random.normal(0.97, 0.005, np.size(Ts))
 Emissivity=np.reshape(Emissivity,(np.shape(Ts)))
 NewEmiss=Emissivity
-Lambda=-1e3
-Mu=1e6
+Lambda=0#-115#285#5e3
+Mu=0#870959#-2160021#-1e2
 dL=25
 dE=0.005
 stepLambda=1e2
-stepMu=1e5
+stepMu=1e1
 stepE=1e-6
 stepL=10
 
 #Now gradient descent
-while abs(DeltaLag)>1:
-    print(Depth, Emissivity[150,150], Lambda, Mu)
+while abs(DeltaLag)>200:
+    print(Depth, Lambda, Mu)
     OldLag=Lag
     Emiss1D=NewEmiss
     #1 Compute the basic components we need for the lagrangian
@@ -136,62 +142,48 @@ while abs(DeltaLag)>1:
     dJ1dL=(Attempt2[0]-J1)/dL
     dJ2dL=(Attempt2[1]-J2)/dL
     dJ3dL = (Attempt2[2] - J3) / dL
+    '''Attempt3=ComputeLagComponents(Depth, Emissivity+dE)
+    dJ1dE=(Attempt3[0]-J1)/dE
+    dJ2dE=(Attempt3[1]-J2)/dE
+    dJ3dE = (Attempt3[2] - J3) / dE'''
+
+    #Mu = -dJ1dL / dJ3dL
+    #Lambda=np.mean(0.5*(-2/(Emiss1D-np.mean(Emiss1D)*(Teff1D*(Tbmod1D-TbObs1D)-Mu/N*(Teff1D-np.mean(Teff1D))))-Mu/N*Tbmod1D))
+
+    #New Lagrange multipliers
+    Mu = Mu - J3 * stepMu
+    Lambda=Lambda-J2*stepLambda
+
+    #Lagrangian gradients
     dLagdL=dJ1dL+Lambda*dJ2dL+Mu*dJ3dL
-    dLdE=2*Teff*(Tbmod-TbObs)+Mu/N*(Teff-np.mean(Teff)*Mask)+(2*Lambda+Mu/N*Tbmod)*(Emissivity-np.mean(Emiss1D)*Mask)
+    #dLdE = dJ1dE + Lambda * dJ2dE + Mu * dJ3dE
+    dLdE=2*Teff*(Tbmod-TbObs)+Mu/N*(Teff-np.mean(Teff1D)*Mask)+(2*Lambda/N+Mu/N*Tbmod)*(Emissivity-np.mean(Emiss1D)*Mask)
+    #dLdE=2*Teff*(Tbmod-TbObs)+2*Lambda*(Emissivity-np.mean(Emiss1D)*Mask)
+    dJ1dE=2*Teff*(Tbmod-TbObs)
+    dJ2dE=2*Lambda/N*(Emissivity-np.mean(Emiss1D)*Mask)
+    dJ3dE=Mu/N*(Teff-np.mean(Teff1D)*Mask+(Emissivity-np.mean(Emiss1D)*Mask)*Tbmod)
+    print("dJ1dE:", np.mean(dJ1dE))
+    print("dJ2dE:", Lambda*np.mean(dJ2dE))
+    print("dJ3dE:", Mu*np.mean(dJ3dE))
 
-    #TODO : calculer dJde comme pour dJdL, histoire de comparer...
-    #print(dJ1)
     #Compute the new free RVs
-    #Mu=Mu-J3*stepMu
-    #Lambda=Lambda-J2*stepLambda
-    Emissivity=Emissivity-dLdE*stepE
-    #Depth=Depth-dLagdL*stepL
+    Emissivity=Emissivity-dJ1dE*stepE
+    Depth=Depth-dLagdL*stepL
 
+    #New Lagrangiana dn differnce with previous value
     Lag=J1+Lambda*J2+Mu*J3
     DeltaLag=Lag-OldLag
+
     print("Lagrangien:", Lag, J1, J2, J3)
+    print("DeltaLag : ", DeltaLag)
+print("Lambda", Lambda)
+print("Mu:", Mu)
 
-dJ1dL=ComputeGrad(J1,frac,0)
-dJ2dL=ComputeGrad(J2,frac,0)
-dJ3dL=ComputeGrad(J3,frac,0)
-
-dJ1de=ComputeGrad(J1,frac,1)
-dJ2de=ComputeGrad(J2,frac,1)
-dJ3de=ComputeGrad(J3,frac,1)
-Lambdas=np.zeros(np.shape(dJ1dL))
-Mus=np.zeros(np.shape(dJ1dL))
-
-i=0
-for u in dJ1dL:
-    j=0
-    for v in u:
-        A=np.matrix([[dJ2de[i,j],dJ3de[i,j]],[dJ2dL[i,j],dJ3dL[i,j]]])
-        B=np.matrix([[dJ1de[i,j]],[dJ1dL[i,j]]])
-        print(A,np.linalg.inv(A))
-        X=np.linalg.solve(A,-B)#np.dot(np.linalg.inv(A),-B)
-        Lambdas[i,j]=X[0,0]
-        Mus[i, j] = X[1, 0]
-        j=j+1
-    i=i+1
-
-print("Lambdas", Lambdas)
-print("Mus:", Mus)
-
-Score=Lambdas**2*J2[1:-1,1:-1]**2+Mus**2*J3[1:-1,1:-1]**2
-i,m = np.unravel_index(np.argmin(Score),Score.shape)
-Lambda=Lambdas[i,m]
-Mu=Mus[i,m]
-
-J=J1+Lambda*J2+Mu*J3
-u,v = np.unravel_index(np.argmin(J),J.shape)
-print("Best solution:", Depth[u], frac[v])
-
-'''fig = plt.figure()
-ax = fig.add_subplot(111, projection='3d')
-X, Y = np.meshgrid(frac, Depth)
-plt.contour(X, Y, J, 25)#J1+3e4* np.arange(0,1e6,2e4)) marche avec 1e4 pour chacun
-ax.set_ylabel("Depth")
-ax.set_xlabel("Emissivity")
-ax.set_zlabel("J")
-plt.grid()
-plt.show()'''
+fig, ax = plt.subplots(nrows=1, ncols=1)
+norm = mpl.colors.Normalize(vmin=0.9, vmax=1)
+cmap = mpl.cm.spectral
+myplot = ax.pcolormesh(Emissivity, cmap=cmap, norm=norm)
+cbar = fig.colorbar(myplot, ticks=np.arange(0.90, 1.01, 0.01))
+cbar.set_label('Emissivity', rotation=270)
+cbar.ax.set_xticklabels(['0.95', '0.96', '0.97', '0.98', '0.99', '1.0'])
+plt.show()
