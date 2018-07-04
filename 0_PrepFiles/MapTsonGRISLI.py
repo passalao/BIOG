@@ -81,14 +81,8 @@ Mask[Interp_TsCrocus>-8]=0
 Interp_TsCrocus=Mask*Interp_TsCrocus+(1-Mask)*TsRACMO
 
 nc_interp.variables['TsCrocus'][:] = Interp_TsCrocus
+nc_interp.close()
 
-# Geographic plot
-fig, ax = plt.subplots(nrows=1, ncols=1, sharex='col')
-cmap = mpl.cm.coolwarm
-norm = mpl.colors.Normalize(vmin=-70, vmax=0)
-myplot=ax.pcolormesh(Interp_TsCrocus, cmap=cmap, norm=norm)
-
-plt.show()
 
 '''# Geographic plot
 fig, ax = plt.subplots()
@@ -102,4 +96,11 @@ plt.axis('equal')
 plt.savefig("../../OutputData/img/Error_SMOS-sMod_DMRTML.png")
 plt.show()
 plt.close()'''
-nc_interp.close()
+
+# Geographic plot
+fig, ax = plt.subplots(nrows=1, ncols=1, sharex='col')
+cmap = mpl.cm.coolwarm
+norm = mpl.colors.Normalize(vmin=-70, vmax=0)
+myplot=ax.pcolormesh(Interp_TsCrocus, cmap=cmap, norm=norm)
+
+plt.show()

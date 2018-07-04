@@ -8,6 +8,19 @@ sys.path.insert(0, "/home/passalao/Documents/SMOS-FluxGeo/BIOG")
 import BIOG
 import NC_Resources as ncr
 
+def ComputeEmissivity(Depth):#Tz_gr,H,Depths,f,TsMin, TsMax,Subsample):
+    Teff=np.zeros(np.shape(H))
+    TbObs=np.zeros(np.shape(H))
+    Mask=np.zeros(np.shape(H))
+
+    for i in np.arange(0,np.shape(H)[0], 1):
+        for j in np.arange(0,np.shape(H)[1], 1):
+            if Ts[i,j]>TsMin and Ts[i,j]<TsMax and H[i,j]>10:
+                Teff[i,j]=273.15+sum(Tz_gr[i,j]*np.exp(-(1-Zeta[i,j])*H[i,j]/Depth)*0.05*H[i,j]/Depth)/sum(np.exp(-(1-Zeta[i,j])*H[i,j]/Depth)*0.05*H[i,j]/Depth)
+                Mask[i,j]=1
+    TbObs=Tb*Mask
+    Emissivity=TbObs/Teff
+    return Emissivity
 
 def ComputeLagComponents(Depth, E):
     Teff=np.zeros(np.shape(E))
@@ -30,8 +43,14 @@ def ComputeLagComponents(Depth, E):
     J2=np.sum((Emiss1D[Emiss1D!=0]-np.mean(Emiss1D[Emiss1D!=0]))**2)#/np.std(Emiss1D[Emiss1D!=0])**2
 
     #Compute normalized covariance = correlation
-    m=np.stack((Emiss1D, Teff1D), axis=0)
-    J3=(((np.cov(m))[0,1])**2)**0.5
+    m=np.stack((Emiss1D[Emiss1D!=0], Teff1D[Emiss1D!=0]), axis=0)
+    J3=abs(np.cov(m)[0,1])/np.std(Emiss1D[Emiss1D!=0])/np.std(Teff1D[Emiss1D!=0])#)**2)**0.5
+
+    #Compute explained variance
+    '''xymean=sum((Emiss1D[Emiss1D!=0]-np.mean(Emiss1D[Emiss1D!=0]))*(Teff1D[Emiss1D!=0]-np.mean(Teff1D[Emiss1D!=0])))/np.size(Teff1D[Emiss1D!=0])
+    sigmax=(sum((Emiss1D[Emiss1D!=0]-np.mean(Emiss1D[Emiss1D!=0]))**2)/np.size(Emiss1D[Emiss1D!=0]))**0.5
+    sigmay=(sum((Teff1D[Emiss1D!=0]-np.mean(Teff1D[Emiss1D!=0]))**2)/np.size(Teff1D[Emiss1D!=0]))**0.5
+    J3=abs(xymean/sigmax/sigmay)'''
 
     return J1, J2, J3, Teff, Tbmod, TbObs, Teff1D, Tbmod1D, TbObs1D, Emiss1D, Mask
 
@@ -39,6 +58,8 @@ def ComputeLagComponents(Depth, E):
 print("Load data")
 Obs = netCDF4.Dataset('../../SourceData/SMOS/SMOSL3_StereoPolar_AnnualMeanSansNDJ_TbV_52.5deg_xy.nc')
 Tb = Obs.variables['BT_V']
+X = Obs.variables['x_ease2']
+Y = Obs.variables['y_ease2']
 Tb=Tb[0]
 nc_obsattrs, nc_obsdims, nc_obsvars = ncr.ncdump(Obs)
 
@@ -51,7 +72,7 @@ Ts=Tz_gr[:,:,0]
 
 #Parameters for data analyse
 DeltaT=5
-SliceT=np.arange(-60,-10,DeltaT)
+SliceT=np.arange(-60,0,DeltaT)
 print("Temperatures : ", SliceT)
 
 FinalEmissivity=np.zeros(np.shape(Ts))
@@ -67,6 +88,7 @@ for t in SliceT:
 
     print("Slice between ", TsMin, " and ", TsMax)
     MinDeltaJ1=20
+    MinDeltaLag=210
 
     DeltaLag=1e10
     DeltaJ1=1e10
@@ -75,14 +97,16 @@ for t in SliceT:
     Depth=300
     Emissivity=np.random.normal(0.97, 0.005, np.size(Ts))
     Emissivity=np.reshape(Emissivity,(np.shape(Ts)))
+    #Emissivity=ComputeEmissivity(Depth)
+
     NewEmiss=Emissivity
     Lambda=0
     Mu=0
     dL=25
     dE=0.005
     stepLambda=1e2
-    stepMu=1e1
-    stepE=1e-6
+    stepMu=1e2
+    stepE=1e-7
     stepL=10
 
     #Now gradient descent to optimize L=J1+Lambda*J2+Mu*J3
@@ -108,6 +132,8 @@ for t in SliceT:
         Emiss1D = Attempt1[9]
         Mask = Attempt1[10]
 
+        print("J1 : ", J1,"J2 : ", J2,"J3 : ", J3)
+
         N=np.size(Emiss1D)
 
         # Update Lagrange multipliers
@@ -122,13 +148,12 @@ for t in SliceT:
         dLagdL=dJ1dL+Lambda*dJ2dL+Mu*dJ3dL
 
         dLdE=2*Teff*(Tbmod-TbObs)+Mu/N*(Teff-np.mean(Teff1D)*Mask)+(2*Lambda/N+Mu/N*Tbmod)*(Emissivity-np.mean(Emiss1D)*Mask)
-
         dJ1dE=2*Teff*(Tbmod-TbObs)
         dJ2dE=2*Lambda/N*(Emissivity-np.mean(Emiss1D)*Mask)
         dJ3dE=Mu/N*(Teff-np.mean(Teff1D)*Mask+(Emissivity-np.mean(Emiss1D)*Mask)*Tbmod)
 
         #Compute the new free RVs
-        Emissivity=Emissivity-dJ1dE*stepE
+        Emissivity = Emissivity - dLdE * stepE
         Depth=Depth-dLagdL*stepL
 
         #New Lagrangian differnce with previous value
@@ -142,28 +167,40 @@ for t in SliceT:
 
     FinalEmissivity=FinalEmissivity+Mask*Emissivity
 
-#Create new NetCDF file for Emissivity data
-nc_new = Dataset('../../SourceData/WorkingFiles/Emissivity_FromGradientDescent_nDim.nc', 'w', format='NETCDF4')
-nc_new.description = "Emissivity output from inversion of brightness temperature signal"
+#for display
+FinalEmissivity[FinalEmissivity==0]=FinalEmissivity[112,100]
 
-#Create NetCDF dimensions
-for dim in nc_obsdims:
-    dim_name=dim
-    if dim=="rows":
-        dim_name="x"
-    if dim=="cols":
-        dim_name="y"
-    nc_new.createDimension(dim_name, Obs.dimensions[dim].size)
-nc_new.createVariable("Emissivity", 'float64', ('x','y'))
-nc_new.variables["Emissivity"][:] = FinalEmissivity[:, :]
-nc_new.close()
+'''#Create NetCDF file
+outfile = r'../../SourceData/WorkingFiles/Emissivity_FromGradientDescent_nDim.nc'
+nc_new = netCDF4.Dataset(outfile, 'w', clobber=True)
 
+cols = len(X[0,:])
+rows = len(Y[:,0])
+
+Xout = nc_new.createDimension('x', cols)
+Xout = nc_new.createVariable('x', 'f4', ('x',))
+Xout.standard_name = 'x'
+Xout.units = 'm'
+Xout.axis = "X"
+Xout[:] = X[0,:]-25000
+Yout = nc_new.createDimension('y', rows)
+Yout = nc_new.createVariable('y', 'f4', ('y',))
+Yout.standard_name = 'y'
+Yout.units = 'm'
+Yout.axis = "Y"
+Yout[:] = Y[:,0]+25000
+
+nc_new.createVariable("Emissivity", 'float64', ('y','x'))
+nc_new.variables["Emissivity"][:] = FinalEmissivity[::-1,:]
+crs = nc_new.createVariable('spatial_ref', 'i4')
+crs.spatial_ref='PROJCS["WGS_84_NSIDC_EASE_Grid_2_0_South",GEOGCS["GCS_WGS_1984",DATUM["D_WGS_1984",SPHEROID["WGS_1984",6378137,298.257223563]],PRIMEM["Greenwich",0],UNIT["Degree",0.017453292519943295]],PROJECTION["Lambert_Azimuthal_Equal_Area"],PARAMETER["latitude_of_origin",-90],PARAMETER["central_meridian",0],PARAMETER["false_easting",0],PARAMETER["false_northing",0],UNIT["Meter",1]]'
+nc_new.close()'''
 
 fig, ax = plt.subplots(nrows=1, ncols=1)
 norm = mpl.colors.Normalize(vmin=0.9, vmax=1)
 cmap = mpl.cm.spectral
 myplot = ax.pcolormesh(FinalEmissivity, cmap=cmap, norm=norm)
-cbar = fig.colorbar(myplot, ticks=np.arange(0.90, 1.01, 0.01))
+cbar = fig.colorbar(myplot, ticks=np.arange(0.90, 1.01, 0.02))
 cbar.set_label('Emissivity', rotation=270)
 cbar.ax.set_xticklabels(['0.95', '0.96', '0.97', '0.98', '0.99', '1.0'])
 plt.savefig("../../OutputData/img/InvertingEmissDepth/Emissivity_DescentGrad_nDim.png")

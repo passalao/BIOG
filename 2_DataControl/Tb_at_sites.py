@@ -60,13 +60,13 @@ XpixS=(XsS-X[0][0])//Lx+1
 YpixS=(YsS-Y[-1][-1])//Ly+1
 print(XpixS, YpixS)
 
-SitesN=['GRIP']
+SitesN=[]#'GRIP']
 Lon=[-37.62]
 Lat=[72.57]
 StereoPolN = pyproj.Proj(init="EPSG:6933")
 XsN, YsN = pyproj.transform(wgs84, StereoPolN, Lon, Lat)
-XsN=[-3629813]
-YsN=[7002276]
+XsN=[]#[-3629813]
+YsN=[]#[7002276]
 XpixN=(XsN-XN[0][0])//LxN+1
 YpixN=(YsN-YN[0][0])//LyN+1
 Sites=SitesS+SitesN

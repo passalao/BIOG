@@ -20,8 +20,8 @@ nrows=np.size(Y[:,0])
 
 nc_obsattrs, nc_obsdims, nc_obsvars = ncr.ncdump(Obs)
 
-
 time=Obs.variables['time'][:]
+RefTime=dt.date(2009,1,1)
 EndTime=dt.date(2018,5,31)
 
 MonthlyAveragedTbV=np.zeros((12,nrows,ncols))#Dimensions : 12 months, nx, ny, and a field to store the number of useful dates
@@ -32,7 +32,7 @@ NbUsefulDates=np.zeros((12,nrows,ncols))
 
 Offset=376
 i=Offset
-for t in np.arange(376,3437,1):#time:
+for t in np.arange(376,3437,1):#3437
     Date=RefTime + dt.timedelta(days=i)
     print(Date)
     MonthlyAveragedTbV[Date.month-1,:,:][Tb[i-Offset,:,:]!=Lowerbound]=MonthlyAveragedTbV[Date.month-1,:,:][Tb[i-Offset,:,:]!=Lowerbound]+Tb[i-Offset,:,:][Tb[i-Offset,:,:]!=Lowerbound]
@@ -47,16 +47,28 @@ for m in np.arange(0,12,1):
     MonthlyAveragedTbV[m,:,:]=MonthlyAveragedTbV[m,:,:]/NbUsefulDates[m,:,:]
     #MonthlyAveragedTbV[m,:,:][NbUsefulDates[m,:,:]!=0]=MonthlyAveragedTbV[m,:,:][NbUsefulDates[m,:,:]!=0]/NbUsefulDates[m,:,:][NbUsefulDates[m,:,:]!=0]
     #MonthlyAveragedTbV[m,:,:][NbUsefulDates[m,:,:]==0]=9999.0
+MonthlyAveragedTbV=np.reshape(MonthlyAveragedTbV, (1,np.size(MonthlyAveragedTbV)))[0]
+print(MonthlyAveragedTbV)
+MonthlyAveragedTbV[np.isnan(MonthlyAveragedTbV)]=0
+MonthlyAveragedTbV=np.reshape(MonthlyAveragedTbV, np.shape(NbUsefulDates))
+
+Sigmas=[[np.std(MonthlyAveragedTbV[:,i,j]) for j in np.arange(0,224,1)] for i in np.arange(0,200,1)]
+print(Sigmas)
 
 # Geographic plot
-norm = mpl.colors.Normalize(vmin=200, vmax=260)
+fig, ax = plt.subplots(nrows=1, ncols=1)
+norm = mpl.colors.Normalize(vmin=0, vmax=1)
 cmap = mpl.cm.spectral
-plt.pcolormesh(MonthlyAveragedTbV[1,:,:], cmap=cmap, norm=norm)
-#cbar = fig.colorbar(myplot, ticks=np.arange(-10, 10, 1))
-#cbar.ax.set_xticklabels(['-10', '0', '10'])  # vertically oriented colorbar
+myplot=ax.pcolormesh(Sigmas, cmap=cmap, norm=norm)
+cbar = fig.colorbar(myplot, ticks=np.arange(0, 1.01, 0.5))
+cbar.ax.set_xticklabels(['0', '0.5','1'])  # vertically oriented colorbar
 plt.autoscale(True)
 plt.axis('equal')
+plt.savefig("../../SourceData/SMOS/SMOS_StDev_Monthly.png")
 plt.show()
+
+#norm = mpl.colors.Normalize(vmin=200, vmax=0)
+#plt.pcolormesh(MonthlyAveragedTbV[1,:,:], cmap=cmap, norm=norm)
 
 #Export NectCDF file
 nc_averaged = Dataset('../../SourceData/WorkingFiles/TimeAveragedSMOS.nc', 'w', format='NETCDF4')
