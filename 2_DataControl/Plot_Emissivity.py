@@ -9,7 +9,7 @@ sys.path.insert(0, "/home/passalao/Documents/SMOS-FluxGeo/BIOG")
 import BIOG
 
 # Import temperature data
-Emiss = netCDF4.Dataset('../../SourceData/WorkingFiles/Emissivity_FromGradientDescent_nDim.nc')
+Emiss = netCDF4.Dataset('../../SourceData/WorkingFiles/Emissivity_FromGradientDescent_nDim_E97.nc')
 E = np.array(Emiss.variables['Emissivity'])
 
 # Import SMOS data

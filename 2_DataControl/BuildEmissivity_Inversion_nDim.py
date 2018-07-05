@@ -8,8 +8,8 @@ sys.path.insert(0, "/home/passalao/Documents/SMOS-FluxGeo/BIOG")
 import BIOG
 import NC_Resources as ncr
 
-def ComputeEmissivity(Depth):#Tz_gr,H,Depths,f,TsMin, TsMax,Subsample):
-    Teff=np.zeros(np.shape(H))
+def InitEmissivity(Depth, frac):#Tz_gr,H,Depths,f,TsMin, TsMax,Subsample):
+    Teff=np.zeros(np.shape(H))#+1e10
     TbObs=np.zeros(np.shape(H))
     Mask=np.zeros(np.shape(H))
 
@@ -20,6 +20,12 @@ def ComputeEmissivity(Depth):#Tz_gr,H,Depths,f,TsMin, TsMax,Subsample):
                 Mask[i,j]=1
     TbObs=Tb*Mask
     Emissivity=TbObs/Teff
+    #Emissivity[Teff==0]=0
+    #print(Emissivity)
+    Rand=np.random.normal(0, 0.001, np.size(Tb))
+    Rand=np.reshape(Rand,(np.shape(Tb)))
+    Ebarre=np.mean(Emissivity[Emissivity!=0])
+    Emissivity=frac*Ebarre+(1-frac)*Emissivity+Rand
     return Emissivity
 
 def ComputeLagComponents(Depth, E):
@@ -39,18 +45,13 @@ def ComputeLagComponents(Depth, E):
     TbObs1D=np.reshape(TbObs, (1,np.size(TbObs)))[0,:]
     Emiss1D=np.reshape(Emissivity, (1,np.size(Emissivity)))[0,:]
 
-    J1=np.sum((Tbmod1D[Tbmod1D!=0]-TbObs1D[Tbmod1D!=0])**2)/np.std(TbObs1D[Tbmod1D!=0])**2
-    J2=np.sum((Emiss1D[Emiss1D!=0]-np.mean(Emiss1D[Emiss1D!=0]))**2)#/np.std(Emiss1D[Emiss1D!=0])**2
+    J1=np.sum((Tbmod1D[Tbmod1D!=0]-TbObs1D[Tbmod1D!=0])**2)/np.size(Tbmod1D)#np.std(TbObs1D[Tbmod1D!=0])**2
+    J2=np.std(Emiss1D[Emiss1D!=0])#np.sum((Emiss1D[Emiss1D!=0]-np.mean(Emiss1D[Emiss1D!=0]))**2)/np.size(Emiss1D[Emiss1D!=0])#/np.std(Emiss1D[Emiss1D!=0])**2
+    #J2=np.sum((Emiss1D[Emiss1D!=0]-1)**2)/np.size(Emiss1D)
 
     #Compute normalized covariance = correlation
     m=np.stack((Emiss1D[Emiss1D!=0], Teff1D[Emiss1D!=0]), axis=0)
     J3=abs(np.cov(m)[0,1])/np.std(Emiss1D[Emiss1D!=0])/np.std(Teff1D[Emiss1D!=0])#)**2)**0.5
-
-    #Compute explained variance
-    '''xymean=sum((Emiss1D[Emiss1D!=0]-np.mean(Emiss1D[Emiss1D!=0]))*(Teff1D[Emiss1D!=0]-np.mean(Teff1D[Emiss1D!=0])))/np.size(Teff1D[Emiss1D!=0])
-    sigmax=(sum((Emiss1D[Emiss1D!=0]-np.mean(Emiss1D[Emiss1D!=0]))**2)/np.size(Emiss1D[Emiss1D!=0]))**0.5
-    sigmay=(sum((Teff1D[Emiss1D!=0]-np.mean(Teff1D[Emiss1D!=0]))**2)/np.size(Teff1D[Emiss1D!=0]))**0.5
-    J3=abs(xymean/sigmax/sigmay)'''
 
     return J1, J2, J3, Teff, Tbmod, TbObs, Teff1D, Tbmod1D, TbObs1D, Emiss1D, Mask
 
@@ -72,7 +73,7 @@ Ts=Tz_gr[:,:,0]
 
 #Parameters for data analyse
 DeltaT=5
-SliceT=np.arange(-60,0,DeltaT)
+SliceT=np.arange(-60, 0,DeltaT)
 print("Temperatures : ", SliceT)
 
 FinalEmissivity=np.zeros(np.shape(Ts))
@@ -81,41 +82,39 @@ FinalEmissivity=np.zeros(np.shape(Ts))
 for t in SliceT:
     TsMax = t + DeltaT
     TsMin = t
-    ''' if t>=-35:
-        MinDeltaLag = 400
-    else:
-        MinDeltaLag = 210'''
-
+    print("  ")
     print("Slice between ", TsMin, " and ", TsMax)
-    MinDeltaJ1=20
-    MinDeltaLag=210
+    MinDeltaJ1=5e-3
+    MinDeltaJ3=5e-3
+    MinDeltaLag=5e-2
 
     DeltaLag=1e10
     DeltaJ1=1e10
+    DeltaJ3=1e10
     Lag=1e10
     J1=1e10
-    Depth=300
-    Emissivity=np.random.normal(0.97, 0.005, np.size(Ts))
+    J3=1e10
+    Depth=-10*t #initiate with plausible
+    Emissivity=np.random.normal(0.98, 0.02, np.size(Ts))
     Emissivity=np.reshape(Emissivity,(np.shape(Ts)))
-    #Emissivity=ComputeEmissivity(Depth)
+    #Emissivity=InitEmissivity(Depth, 0.9)
 
     NewEmiss=Emissivity
     Lambda=0
     Mu=0
-    dL=25
-    dE=0.005
-    stepLambda=1e2
-    stepMu=1e2
-    stepE=1e-7
-    stepL=10
+    dL=100
+    dE=0.001
+    stepLambda=1e1
+    stepMu=1e1
+    stepE=1e-6
+    stepL=100000
 
     #Now gradient descent to optimize L=J1+Lambda*J2+Mu*J3
-
-    while abs(DeltaJ1)>MinDeltaJ1:
+    while abs(DeltaJ1)>MinDeltaJ1 or abs(DeltaJ3)>MinDeltaJ3:
     #while abs(DeltaLag)>MinDeltaLag:
-        print("Depth: ", Depth, "Lambda: ", Lambda, "Mu: ", Mu)
         OldLag=Lag
         OldJ1=J1
+        OldJ3=J3
         Emiss1D=NewEmiss
 
         #1 Compute the basic components we need for the lagrangian
@@ -138,7 +137,7 @@ for t in SliceT:
 
         # Update Lagrange multipliers
         Mu = Mu - J3 * stepMu
-        Lambda = Lambda - J2 * stepLambda
+        Lambda = 0 #Lambda - J2 * stepLambda
 
         #2 Compute the gradients
         Attempt2=ComputeLagComponents(Depth+dL, Emissivity)
@@ -147,20 +146,28 @@ for t in SliceT:
         dJ3dL = (Attempt2[2] - J3) / dL
         dLagdL=dJ1dL+Lambda*dJ2dL+Mu*dJ3dL
 
+        #dLdE = 2*Teff*(Tbmod-TbObs)+Mu/N*(Teff-np.mean(Teff1D)*Mask)+2*Lambda/N*(Emissivity - 1)*Mask+Mu/N*Tbmod*(Emissivity-np.mean(Emiss1D)*Mask)
         dLdE=2*Teff*(Tbmod-TbObs)+Mu/N*(Teff-np.mean(Teff1D)*Mask)+(2*Lambda/N+Mu/N*Tbmod)*(Emissivity-np.mean(Emiss1D)*Mask)
         dJ1dE=2*Teff*(Tbmod-TbObs)
         dJ2dE=2*Lambda/N*(Emissivity-np.mean(Emiss1D)*Mask)
         dJ3dE=Mu/N*(Teff-np.mean(Teff1D)*Mask+(Emissivity-np.mean(Emiss1D)*Mask)*Tbmod)
 
+        #print(np.mean(dJ3dL), np.mean(dJ3dE))
+
         #Compute the new free RVs
         Emissivity = Emissivity - dLdE * stepE
-        Depth=Depth-dLagdL*stepL
+        #Emissivity[Mask==0]=0
+        Depth=max(1,Depth-dLagdL*stepL)#avoid negative depths
 
         #New Lagrangian differnce with previous value
         Lag=J1+Lambda*J2+Mu*J3
         DeltaLag=Lag-OldLag
         DeltaJ1=J1-OldJ1
-        print("DeltaJ1 : ", DeltaJ1)
+        DeltaJ3 = J3 - OldJ3
+        #print("DeltaJ1 : ", DeltaJ1)
+        print("DeltaLag : ", DeltaLag)
+        print("Lagrangien : ", Lag)
+        print("Depth: ", Depth, "Emissivity", np.mean(Emissivity))
 
     print("Lambda", Lambda)
     print("Mu:", Mu)
@@ -170,7 +177,7 @@ for t in SliceT:
 #for display
 FinalEmissivity[FinalEmissivity==0]=FinalEmissivity[112,100]
 
-'''#Create NetCDF file
+#Create NetCDF file
 outfile = r'../../SourceData/WorkingFiles/Emissivity_FromGradientDescent_nDim.nc'
 nc_new = netCDF4.Dataset(outfile, 'w', clobber=True)
 
@@ -194,7 +201,7 @@ nc_new.createVariable("Emissivity", 'float64', ('y','x'))
 nc_new.variables["Emissivity"][:] = FinalEmissivity[::-1,:]
 crs = nc_new.createVariable('spatial_ref', 'i4')
 crs.spatial_ref='PROJCS["WGS_84_NSIDC_EASE_Grid_2_0_South",GEOGCS["GCS_WGS_1984",DATUM["D_WGS_1984",SPHEROID["WGS_1984",6378137,298.257223563]],PRIMEM["Greenwich",0],UNIT["Degree",0.017453292519943295]],PROJECTION["Lambert_Azimuthal_Equal_Area"],PARAMETER["latitude_of_origin",-90],PARAMETER["central_meridian",0],PARAMETER["false_easting",0],PARAMETER["false_northing",0],UNIT["Meter",1]]'
-nc_new.close()'''
+nc_new.close()
 
 fig, ax = plt.subplots(nrows=1, ncols=1)
 norm = mpl.colors.Normalize(vmin=0.9, vmax=1)
