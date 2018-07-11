@@ -3,7 +3,7 @@ import netCDF4, math
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 import numpy as np
-import sys, time
+import sys, time, csv
 sys.path.insert(0, "/home/passalao/Documents/SMOS-FluxGeo/BIOG")
 import BIOG
 import NC_Resources as ncr
@@ -26,7 +26,7 @@ def InitEmissivity(Depth, frac):#Tz_gr,H,Depths,f,TsMin, TsMax,Subsample):
     Rand=np.reshape(Rand,(np.shape(Tb)))
     Ebarre=np.mean(Emissivity[Emissivity!=0])
     Emissivity=frac*Ebarre+(1-frac)*Emissivity+Rand
-    return Emissivity
+    return Emissivity, Ebarre
 
 def ComputeLagComponents(Depth, E):
     Teff=np.zeros(np.shape(E))
@@ -43,24 +43,22 @@ def ComputeLagComponents(Depth, E):
     Teff1D=np.reshape(Teff, (1,np.size(Teff)))[0,:]
     Tbmod1D=np.reshape(Tbmod, (1,np.size(Tbmod)))[0,:]
     TbObs1D=np.reshape(TbObs, (1,np.size(TbObs)))[0,:]
-    Emiss1D=np.reshape(Emissivity, (1,np.size(Emissivity)))[0,:]
+    Emiss1D=np.reshape(E, (1,np.size(Emissivity)))[0,:]
 
-    J1=np.sum((Tbmod1D[Tbmod1D!=0]-TbObs1D[Tbmod1D!=0])**2)/np.size(Tbmod1D)#np.std(TbObs1D[Tbmod1D!=0])**2
-    J2=np.std(Emiss1D[Emiss1D!=0])#np.sum((Emiss1D[Emiss1D!=0]-np.mean(Emiss1D[Emiss1D!=0]))**2)/np.size(Emiss1D[Emiss1D!=0])#/np.std(Emiss1D[Emiss1D!=0])**2
-    #J2=np.sum((Emiss1D[Emiss1D!=0]-1)**2)/np.size(Emiss1D)
+    J1=(np.sum((Tbmod1D[Tbmod1D!=0]-TbObs1D[Tbmod1D!=0])**2)/np.size(Tbmod1D))#np.std(TbObs1D[Tbmod1D!=0])**2
+    J2=np.sum((Emiss1D[Emiss1D!=0]-np.mean(Emiss1D[Emiss1D!=0]))**2)#/np.std(Emiss1D[Emiss1D!=0])**2
 
     #Compute normalized covariance = correlation
-    m=np.stack((Emiss1D[Emiss1D!=0], Teff1D[Emiss1D!=0]), axis=0)
-    J3=abs(np.cov(m)[0,1])/np.std(Emiss1D[Emiss1D!=0])/np.std(Teff1D[Emiss1D!=0])#)**2)**0.5
-
-    return J1, J2, J3, Teff, Tbmod, TbObs, Teff1D, Tbmod1D, TbObs1D, Emiss1D, Mask
+    m=np.stack((Emiss1D, Teff1D), axis=0)
+    signJ3=np.sign(np.cov(m)[0,1])
+    J3=(abs(np.cov(m)[0,1])/np.std(Emiss1D[Emiss1D!=0])/np.std(Teff1D[Emiss1D!=0]))
+    print("J1", J1, "J3", J3)
+    return J1, J2, J3, Teff, Tbmod, TbObs, Teff1D, Tbmod1D, TbObs1D, Emiss1D, Mask, signJ3
 
 # Import SMOS data
 print("Load data")
 Obs = netCDF4.Dataset('../../SourceData/SMOS/SMOSL3_StereoPolar_AnnualMeanSansNDJ_TbV_52.5deg_xy.nc')
 Tb = Obs.variables['BT_V']
-X = Obs.variables['x_ease2']
-Y = Obs.variables['y_ease2']
 Tb=Tb[0]
 nc_obsattrs, nc_obsdims, nc_obsvars = ncr.ncdump(Obs)
 
@@ -73,48 +71,61 @@ Ts=Tz_gr[:,:,0]
 
 #Parameters for data analyse
 DeltaT=5
-SliceT=np.arange(-60, 0,DeltaT)
+SliceT=np.arange(-55,-50,DeltaT)
 print("Temperatures : ", SliceT)
 
 FinalEmissivity=np.zeros(np.shape(Ts))
-
+#Depths=[]
+J1s=[]
+J3s=[]
+Mus=[]
+Ebarres=[]
+Depths=np.arange(100,600,50)#
 #Work slice by slice
-for t in SliceT:
+#for t in SliceT:
+for d in Depths:
+    t=-35
     TsMax = t + DeltaT
     TsMin = t
-    print("  ")
+
+    print(' ')
     print("Slice between ", TsMin, " and ", TsMax)
+
     MinDeltaJ1=5e-3
     MinDeltaJ3=5e-3
-    MinDeltaLag=5e-2
+    MinDeltaLag=2e-2
 
     DeltaLag=1e10
-    DeltaJ1=1e10
-    DeltaJ3=1e10
+    DeltaJ1=-1e10
+    DeltaJ3=-1e10
     Lag=1e10
     J1=1e10
     J3=1e10
-    Depth=-10*t #initiate with plausible
-    Emissivity=np.random.normal(0.98, 0.02, np.size(Ts))
-    Emissivity=np.reshape(Emissivity,(np.shape(Ts)))
-    #Emissivity=InitEmissivity(Depth, 0.9)
+    Depth=d#-t*5
+
+    #Emissivity=np.random.normal(0.97, 0.005, np.size(Ts))
+    #Emissivity=np.reshape(Emissivity,(np.shape(Ts)))
+    Emissivity=InitEmissivity(Depth, 0.9)[0]
+    Ebarre=InitEmissivity(Depth, 0.9)[1]
+    #Mask=InitEmissivity(Depth, 0.9)[1]
 
     NewEmiss=Emissivity
     Lambda=0
-    Mu=0
-    dL=100
-    dE=0.001
-    stepLambda=1e1
-    stepMu=1e1
+    Mu=10
+    dL=25
+    dE=0.005
+    stepLambda=1e2
+    stepMu=1e4
     stepE=1e-6
     stepL=100000
 
     #Now gradient descent to optimize L=J1+Lambda*J2+Mu*J3
-    while abs(DeltaJ1)>MinDeltaJ1 or abs(DeltaJ3)>MinDeltaJ3:
-    #while abs(DeltaLag)>MinDeltaLag:
+    #while abs(DeltaJ3)>MinDeltaJ3 or abs(DeltaJ1)>MinDeltaJ1 <0:
+    while abs(DeltaLag)>MinDeltaLag:
+        print("Depth: ", Depth, "Emissivity:", np.mean(Emissivity))#, "Lambda: ", Lambda, "Mu: ", Mu)
         OldLag=Lag
         OldJ1=J1
-        OldJ3=J3
+        OldJ3 = J3
         Emiss1D=NewEmiss
 
         #1 Compute the basic components we need for the lagrangian
@@ -130,14 +141,13 @@ for t in SliceT:
         TbObs1D = Attempt1[8]
         Emiss1D = Attempt1[9]
         Mask = Attempt1[10]
+        Sign= Attempt1[11]
 
-        print("J1 : ", J1,"J2 : ", J2,"J3 : ", J3)
-
-        N=np.size(Emiss1D)
+        N=np.size(Mask[Mask==1])
 
         # Update Lagrange multipliers
-        Mu = Mu - J3 * stepMu
-        Lambda = 0 #Lambda - J2 * stepLambda
+        #Mu = Mu - J3 * stepMu
+        Lambda = 0#Lambda - J2 * stepLambda
 
         #2 Compute the gradients
         Attempt2=ComputeLagComponents(Depth+dL, Emissivity)
@@ -146,69 +156,74 @@ for t in SliceT:
         dJ3dL = (Attempt2[2] - J3) / dL
         dLagdL=dJ1dL+Lambda*dJ2dL+Mu*dJ3dL
 
-        #dLdE = 2*Teff*(Tbmod-TbObs)+Mu/N*(Teff-np.mean(Teff1D)*Mask)+2*Lambda/N*(Emissivity - 1)*Mask+Mu/N*Tbmod*(Emissivity-np.mean(Emiss1D)*Mask)
-        dLdE=2*Teff*(Tbmod-TbObs)+Mu/N*(Teff-np.mean(Teff1D)*Mask)+(2*Lambda/N+Mu/N*Tbmod)*(Emissivity-np.mean(Emiss1D)*Mask)
+        dLdE=2*Teff*(Tbmod-TbObs)+Sign*Mu/N*(Teff-np.mean(Teff1D)*Mask)+(2*Lambda/N+Sign*Mu/N*Tbmod)*(Emissivity-np.mean(Emiss1D)*Mask)
+
         dJ1dE=2*Teff*(Tbmod-TbObs)
         dJ2dE=2*Lambda/N*(Emissivity-np.mean(Emiss1D)*Mask)
-        dJ3dE=Mu/N*(Teff-np.mean(Teff1D)*Mask+(Emissivity-np.mean(Emiss1D)*Mask)*Tbmod)
-
-        #print(np.mean(dJ3dL), np.mean(dJ3dE))
+        dJ3dE=Sign*Mu/N*(Teff-np.mean(Teff1D)*Mask+Sign*(Emissivity-np.mean(Emiss1D)*Mask)*Tbmod)
 
         #Compute the new free RVs
-        Emissivity = Emissivity - dLdE * stepE
-        #Emissivity[Mask==0]=0
-        Depth=max(1,Depth-dLagdL*stepL)#avoid negative depths
+        Emissivity=Emissivity-dLdE*stepE
+        #Emissivity = Emissivity - dJ3dE * stepE
+        Depth=max(1,Depth-dLagdL*stepL)
 
         #New Lagrangian differnce with previous value
         Lag=J1+Lambda*J2+Mu*J3
         DeltaLag=Lag-OldLag
         DeltaJ1=J1-OldJ1
-        DeltaJ3 = J3 - OldJ3
-        #print("DeltaJ1 : ", DeltaJ1)
-        print("DeltaLag : ", DeltaLag)
-        print("Lagrangien : ", Lag)
-        print("Depth: ", Depth, "Emissivity", np.mean(Emissivity))
+        DeltaJ3=J3-OldJ3
+        print("DeltaLag",DeltaLag)
 
     print("Lambda", Lambda)
     print("Mu:", Mu)
+    #Depths.append(Depth)
+    Ebarres.append(Ebarre)
+    J1s.append(J1)
+    J3s.append(J3)
 
-    FinalEmissivity=FinalEmissivity+Mask*Emissivity
+    FinalEmissivity[Mask==1]=FinalEmissivity[Mask==1]+Emissivity[Mask==1]
 
-#for display
-FinalEmissivity[FinalEmissivity==0]=FinalEmissivity[112,100]
+print("Depths:" ,Depths)
+print("J1:", J1s)
+print("J3:", J3s)
 
-#Create NetCDF file
-outfile = r'../../SourceData/WorkingFiles/Emissivity_FromGradientDescent_nDim.nc'
-nc_new = netCDF4.Dataset(outfile, 'w', clobber=True)
+#Create new NetCDF file for Emissivity data
+nc_new = Dataset('../../SourceData/WorkingFiles/Emissivity_FromGradientDescent_nDim.nc', 'w', format='NETCDF4')
+nc_new.description = "Emissivity output from inversion of brightness temperature signal"
 
-cols = len(X[0,:])
-rows = len(Y[:,0])
-
-Xout = nc_new.createDimension('x', cols)
-Xout = nc_new.createVariable('x', 'f4', ('x',))
-Xout.standard_name = 'x'
-Xout.units = 'm'
-Xout.axis = "X"
-Xout[:] = X[0,:]-25000
-Yout = nc_new.createDimension('y', rows)
-Yout = nc_new.createVariable('y', 'f4', ('y',))
-Yout.standard_name = 'y'
-Yout.units = 'm'
-Yout.axis = "Y"
-Yout[:] = Y[:,0]+25000
-
-nc_new.createVariable("Emissivity", 'float64', ('y','x'))
-nc_new.variables["Emissivity"][:] = FinalEmissivity[::-1,:]
-crs = nc_new.createVariable('spatial_ref', 'i4')
-crs.spatial_ref='PROJCS["WGS_84_NSIDC_EASE_Grid_2_0_South",GEOGCS["GCS_WGS_1984",DATUM["D_WGS_1984",SPHEROID["WGS_1984",6378137,298.257223563]],PRIMEM["Greenwich",0],UNIT["Degree",0.017453292519943295]],PROJECTION["Lambert_Azimuthal_Equal_Area"],PARAMETER["latitude_of_origin",-90],PARAMETER["central_meridian",0],PARAMETER["false_easting",0],PARAMETER["false_northing",0],UNIT["Meter",1]]'
+#Create NetCDF dimensions
+for dim in nc_obsdims:
+    dim_name=dim
+    if dim=="rows":
+        dim_name="x"
+    if dim=="cols":
+        dim_name="y"
+    nc_new.createDimension(dim_name, Obs.dimensions[dim].size)
+nc_new.createVariable("Emissivity", 'float64', ('x','y'))
+nc_new.variables["Emissivity"][:] = FinalEmissivity[:, :]
 nc_new.close()
+
 
 fig, ax = plt.subplots(nrows=1, ncols=1)
 norm = mpl.colors.Normalize(vmin=0.9, vmax=1)
 cmap = mpl.cm.spectral
 myplot = ax.pcolormesh(FinalEmissivity, cmap=cmap, norm=norm)
-cbar = fig.colorbar(myplot, ticks=np.arange(0.90, 1.01, 0.02))
+cbar = fig.colorbar(myplot, ticks=np.arange(0.90, 1.01, 0.01))
 cbar.set_label('Emissivity', rotation=270)
 cbar.ax.set_xticklabels(['0.95', '0.96', '0.97', '0.98', '0.99', '1.0'])
 plt.savefig("../../OutputData/img/InvertingEmissDepth/Emissivity_DescentGrad_nDim.png")
 plt.show()
+
+'''c = csv.write(open("Inversion_Values.csv", "wb"))
+c.writerow(Depths)
+c.writerow(J1s)
+c.writerow(J3s)
+c.writerow(Mus)
+
+Outputs=np.stack((Depths, J1s, J3s, Mus), axis=1)
+
+print(Outputs)
+for o in Outputs[:]:
+    print()
+    c.writerow(o)
+c.close()'''
