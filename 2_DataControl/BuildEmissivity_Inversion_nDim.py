@@ -8,35 +8,39 @@ sys.path.insert(0, "/home/passalao/Documents/SMOS-FluxGeo/BIOG")
 import BIOG
 import NC_Resources as ncr
 
-def InitEmissivity(Depth, frac):#Tz_gr,H,Depths,f,TsMin, TsMax,Subsample):
-    Teff=np.zeros(np.shape(H))#+1e10
-    TbObs=np.zeros(np.shape(H))
-    Mask=np.zeros(np.shape(H))
+###################################################################################################
+#Functions
+###################################################################################################
 
+#Computes the effective temperature
+def ComputeTeff(L):
+    Teff=np.zeros(np.shape(H))
+    Mask=np.zeros(np.shape(H))
     for i in np.arange(0,np.shape(H)[0], 1):
         for j in np.arange(0,np.shape(H)[1], 1):
-            if Ts[i,j]>TsMin and Ts[i,j]<TsMax and H[i,j]>10:
-                Teff[i,j]=273.15+sum(Tz_gr[i,j]*np.exp(-(1-Zeta[i,j])*H[i,j]/Depth)*0.05*H[i,j]/Depth)/sum(np.exp(-(1-Zeta[i,j])*H[i,j]/Depth)*0.05*H[i,j]/Depth)
+            if Ts[i,j]>TsMin and Ts[i,j]<TsMax and H[i,j]>1:
+                z=(1-Zeta[i,j])*H[i,j]
+                dz=0.05*H[i,j]
+                Teff[i,j]=273.15+sum(Tz_gr[i,j]*np.exp(-z/L)*dz/L)/sum(np.exp(-z/L)*dz/L)
                 Mask[i,j]=1
+    return Teff, Mask
+
+#Computes an initial semi-random emissivity field
+def InitEmissivity(L, frac):
+    Teff=ComputeTeff(L)[0]
+    Mask=ComputeTeff(L)[1]
     TbObs=Tb*Mask
     Emissivity=TbObs/Teff
-    #Emissivity[Teff==0]=0
-    #print(Emissivity)
     Rand=np.random.normal(0, 0.001, np.size(Tb))
     Rand=np.reshape(Rand,(np.shape(Tb)))
     Ebarre=np.mean(Emissivity[Emissivity!=0])
     Emissivity=frac*Ebarre+(1-frac)*Emissivity+Rand
-    return Emissivity, Ebarre
+    return Emissivity, Mask
 
-def ComputeLagComponents(Depth, E):
-    Teff=np.zeros(np.shape(E))
-    Mask=np.zeros(np.shape(E))
-
-    for i in np.arange(0,np.shape(H)[0], 1):
-        for j in np.arange(0,np.shape(H)[1], 1):
-            if Ts[i,j]>TsMin and Ts[i,j]<TsMax and H[i,j]>1:
-                Teff[i,j]=273.15+sum(Tz_gr[i,j]*np.exp(-(1-Zeta[i,j])*H[i,j]/Depth)*0.05*H[i,j]/Depth)/sum(np.exp(-(1-Zeta[i,j])*H[i,j]/Depth)*0.05*H[i,j]/Depth)
-                Mask[i,j]=1
+#Computes the cost functions
+def ComputeLagComponents(L, E):
+    Teff=ComputeTeff(L)[0]
+    Mask=ComputeTeff(L)[1]
     TbObs=Tb*Mask
     Tbmod=E*Teff
 
@@ -45,15 +49,57 @@ def ComputeLagComponents(Depth, E):
     TbObs1D=np.reshape(TbObs, (1,np.size(TbObs)))[0,:]
     Emiss1D=np.reshape(E, (1,np.size(Emissivity)))[0,:]
 
-    J1=(np.sum((Tbmod1D[Tbmod1D!=0]-TbObs1D[Tbmod1D!=0])**2)/np.size(Tbmod1D))#np.std(TbObs1D[Tbmod1D!=0])**2
-    J2=np.sum((Emiss1D[Emiss1D!=0]-np.mean(Emiss1D[Emiss1D!=0]))**2)#/np.std(Emiss1D[Emiss1D!=0])**2
+    J1=(np.sum((Tbmod1D[Tbmod1D!=0]-TbObs1D[Tbmod1D!=0])**2)/np.size(Tbmod1D[Tbmod1D!=0]))
+    J2=np.sum((Emiss1D[Emiss1D!=0]-1)**2)/np.size(Tbmod1D[Tbmod1D!=0])
 
     #Compute normalized covariance = correlation
     m=np.stack((Emiss1D, Teff1D), axis=0)
-    signJ3=np.sign(np.cov(m)[0,1])
-    J3=(abs(np.cov(m)[0,1])/np.std(Emiss1D[Emiss1D!=0])/np.std(Teff1D[Emiss1D!=0]))
+    Sign=np.sign(np.cov(m)[0,1])
+    N=np.size(Mask[Mask==1])
+    sigmaE=np.std(Emiss1D[Emiss1D!=0])
+    sigmaTe=np.std(Teff1D[Emiss1D!=0])
+    J3=abs(np.cov(m)[0,1])/sigmaE/sigmaTe
+
+    #Compute gradients along E
+    dLagdE=2*Teff*(Tbmod-TbObs)+Sign*Mu/sigmaTe/sigmaE/N*(Teff-np.mean(Teff1D)*Mask)+(2*Lambda/N+Sign*Mu/sigmaTe/sigmaE/N*Tbmod)*(Emissivity-np.mean(Emiss1D)*Mask)
+
     print("J1", J1, "J3", J3)
-    return J1, J2, J3, Teff, Tbmod, TbObs, Teff1D, Tbmod1D, TbObs1D, Emiss1D, Mask, signJ3
+    return J1, J2, J3, dLagdE, Teff
+
+def GradientDescent(Depth, Emissivity, DeltaLag, MinDeltaLag, Lag, J1,J3, Lambda, Mu, dE, dL, stepE, stepL):
+    while abs(DeltaLag)>MinDeltaLag and DeltaLag<0:
+        OldLag=Lag
+
+        #1 Compute the basic components we need for the lagrangian
+        Attempt1 = ComputeLagComponents(Depth, Emissivity)
+        J1=Attempt1[0]
+        J2=Attempt1[1]
+        J3=Attempt1[2]
+        dLdE=Attempt1[3]
+        Teff=Attempt1[4]
+
+        #2 Compute numerically the gradients along L
+        Attempt2=ComputeLagComponents(Depth+dL, Emissivity)
+        dJ1dL=(Attempt2[0]-J1)/dL
+        dJ2dL=(Attempt2[1]-J2)/dL
+        dJ3dL = (Attempt2[2] - J3) / dL
+        dLagdL=dJ1dL+Lambda*dJ2dL+Mu*dJ3dL
+
+        #Compute the new free RVs
+        Emissivity=Emissivity-dLdE*stepE
+        Depth=max(1,Depth-dLagdL*stepL)
+
+        #Update Lagrangian
+        Lag=J1+Lambda*J2+Mu*J3
+        DeltaLag=Lag-OldLag
+        print("DeltaLag",DeltaLag)
+
+    return Emissivity, Teff, Depth, J1, J3
+
+###################################################################################################
+#Here solve the optimization problem
+###################################################################################################
+Start=time.time()
 
 # Import SMOS data
 print("Load data")
@@ -71,121 +117,70 @@ Ts=Tz_gr[:,:,0]
 
 #Parameters for data analyse
 DeltaT=5
-SliceT=np.arange(-55,-50,DeltaT)
-print("Temperatures : ", SliceT)
+SliceT=np.arange(-60,0,DeltaT)
+print("Temperatures slices : ", SliceT)
 
+#For outputs
 FinalEmissivity=np.zeros(np.shape(Ts))
-#Depths=[]
+FinalTeff=np.zeros(np.shape(Ts))
 J1s=[]
 J3s=[]
 Mus=[]
-Ebarres=[]
-Depths=np.arange(100,600,50)#
+Depths=[]
+
 #Work slice by slice
-#for t in SliceT:
-for d in Depths:
-    t=-35
+for t in SliceT:
     TsMax = t + DeltaT
     TsMin = t
 
     print(' ')
     print("Slice between ", TsMin, " and ", TsMax)
 
-    MinDeltaJ1=5e-3
-    MinDeltaJ3=5e-3
-    MinDeltaLag=2e-2
-
-    DeltaLag=1e10
-    DeltaJ1=-1e10
-    DeltaJ3=-1e10
+    MinDeltaLag=1e-2
+    MinRelChange=1e-3
+    DeltaLag=-1e10
     Lag=1e10
     J1=1e10
     J3=1e10
-    Depth=d#-t*5
+    Depth=-t*10
 
-    #Emissivity=np.random.normal(0.97, 0.005, np.size(Ts))
-    #Emissivity=np.reshape(Emissivity,(np.shape(Ts)))
-    Emissivity=InitEmissivity(Depth, 0.9)[0]
-    Ebarre=InitEmissivity(Depth, 0.9)[1]
-    #Mask=InitEmissivity(Depth, 0.9)[1]
-
+    Init=InitEmissivity(Depth, 0.9)
+    Emissivity=Init[0]
+    Mask=Init[1]
     NewEmiss=Emissivity
-    Lambda=0
+
+    #Initiate gradient descent parameters
+    Lambda=0#1e7
     Mu=10
     dL=25
     dE=0.005
-    stepLambda=1e2
-    stepMu=1e4
-    stepE=1e-6
+    if t<-40:
+        stepE=1e-5
+    else:
+        stepE = 1e-6
     stepL=100000
 
     #Now gradient descent to optimize L=J1+Lambda*J2+Mu*J3
-    #while abs(DeltaJ3)>MinDeltaJ3 or abs(DeltaJ1)>MinDeltaJ1 <0:
-    while abs(DeltaLag)>MinDeltaLag:
-        print("Depth: ", Depth, "Emissivity:", np.mean(Emissivity))#, "Lambda: ", Lambda, "Mu: ", Mu)
-        OldLag=Lag
-        OldJ1=J1
-        OldJ3 = J3
-        Emiss1D=NewEmiss
+    Solve=GradientDescent(Depth, Emissivity, DeltaLag, MinDeltaLag, Lag, J1,J3, Lambda, Mu, dE, dL, stepE, stepL)
+    Emissivity=Solve[0]
+    Teff=Solve[1]
+    L=Solve[2]
+    J1=Solve[3]
+    J3=Solve[4]
 
-        #1 Compute the basic components we need for the lagrangian
-        Attempt1 = ComputeLagComponents(Depth, Emissivity)
-        J1=Attempt1[0]
-        J2=Attempt1[1]
-        J3=Attempt1[2]
-        Teff=Attempt1[3]
-        Tbmod=Attempt1[4]
-        TbObs = Attempt1[5]
-        Teff1D=Attempt1[6]
-        Tbmod1D=Attempt1[7]
-        TbObs1D = Attempt1[8]
-        Emiss1D = Attempt1[9]
-        Mask = Attempt1[10]
-        Sign= Attempt1[11]
-
-        N=np.size(Mask[Mask==1])
-
-        # Update Lagrange multipliers
-        #Mu = Mu - J3 * stepMu
-        Lambda = 0#Lambda - J2 * stepLambda
-
-        #2 Compute the gradients
-        Attempt2=ComputeLagComponents(Depth+dL, Emissivity)
-        dJ1dL=(Attempt2[0]-J1)/dL
-        dJ2dL=(Attempt2[1]-J2)/dL
-        dJ3dL = (Attempt2[2] - J3) / dL
-        dLagdL=dJ1dL+Lambda*dJ2dL+Mu*dJ3dL
-
-        dLdE=2*Teff*(Tbmod-TbObs)+Sign*Mu/N*(Teff-np.mean(Teff1D)*Mask)+(2*Lambda/N+Sign*Mu/N*Tbmod)*(Emissivity-np.mean(Emiss1D)*Mask)
-
-        dJ1dE=2*Teff*(Tbmod-TbObs)
-        dJ2dE=2*Lambda/N*(Emissivity-np.mean(Emiss1D)*Mask)
-        dJ3dE=Sign*Mu/N*(Teff-np.mean(Teff1D)*Mask+Sign*(Emissivity-np.mean(Emiss1D)*Mask)*Tbmod)
-
-        #Compute the new free RVs
-        Emissivity=Emissivity-dLdE*stepE
-        #Emissivity = Emissivity - dJ3dE * stepE
-        Depth=max(1,Depth-dLagdL*stepL)
-
-        #New Lagrangian differnce with previous value
-        Lag=J1+Lambda*J2+Mu*J3
-        DeltaLag=Lag-OldLag
-        DeltaJ1=J1-OldJ1
-        DeltaJ3=J3-OldJ3
-        print("DeltaLag",DeltaLag)
-
-    print("Lambda", Lambda)
-    print("Mu:", Mu)
-    #Depths.append(Depth)
-    Ebarres.append(Ebarre)
+    Depths.append(L)
     J1s.append(J1)
     J3s.append(J3)
 
     FinalEmissivity[Mask==1]=FinalEmissivity[Mask==1]+Emissivity[Mask==1]
+    FinalTeff[Mask==1]=FinalTeff[Mask==1]+Teff[Mask==1]
 
-print("Depths:" ,Depths)
 print("J1:", J1s)
 print("J3:", J3s)
+print("L:", Depths)
+
+Stop=Start=time.time()
+print("Elapsed time", Stop-Start, "s")
 
 #Create new NetCDF file for Emissivity data
 nc_new = Dataset('../../SourceData/WorkingFiles/Emissivity_FromGradientDescent_nDim.nc', 'w', format='NETCDF4')
@@ -201,8 +196,9 @@ for dim in nc_obsdims:
     nc_new.createDimension(dim_name, Obs.dimensions[dim].size)
 nc_new.createVariable("Emissivity", 'float64', ('x','y'))
 nc_new.variables["Emissivity"][:] = FinalEmissivity[:, :]
+nc_new.createVariable("Teff", 'float64', ('x','y'))
+nc_new.variables["Teff"][:] = FinalTeff[:, :]
 nc_new.close()
-
 
 fig, ax = plt.subplots(nrows=1, ncols=1)
 norm = mpl.colors.Normalize(vmin=0.9, vmax=1)
@@ -213,17 +209,3 @@ cbar.set_label('Emissivity', rotation=270)
 cbar.ax.set_xticklabels(['0.95', '0.96', '0.97', '0.98', '0.99', '1.0'])
 plt.savefig("../../OutputData/img/InvertingEmissDepth/Emissivity_DescentGrad_nDim.png")
 plt.show()
-
-'''c = csv.write(open("Inversion_Values.csv", "wb"))
-c.writerow(Depths)
-c.writerow(J1s)
-c.writerow(J3s)
-c.writerow(Mus)
-
-Outputs=np.stack((Depths, J1s, J3s, Mus), axis=1)
-
-print(Outputs)
-for o in Outputs[:]:
-    print()
-    c.writerow(o)
-c.close()'''
