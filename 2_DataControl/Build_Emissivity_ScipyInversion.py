@@ -16,39 +16,43 @@ np.set_printoptions(threshold=np.nan)
 
 #Computes the effective temperature
 def ComputeTeff(L):
-    Teff=np.zeros(np.shape(H))
+    Teff=np.zeros(np.shape(H)
+    #z = (1-Zeta)
+    for i in np.arange(0,np.shape(H)[0], 1):
+        for j in np.arange(0,np.shape(H)[1], 1):
+            if Mask[i,j]==1:
+                z = (1 - Zeta[i, j]) * H[i, j]
+                dz=0.05*H[i,j]
+                Teff[i,j]=273.15+sum(Tz_gr[i,j]*np.exp(-z/L)*dz/L)/sum(np.exp(-z/L)*dz/L)
+    return Teff
+
+def ComputeMask():
     Mask=np.zeros(np.shape(H))
     for i in np.arange(0,np.shape(H)[0], 1):
         for j in np.arange(0,np.shape(H)[1], 1):
-            if Ts[i,j]>TsMin and Ts[i,j]<TsMax and H[i,j]>1:
-                z=(1-Zeta[i,j])*H[i,j]
-                dz=0.05*H[i,j]
-                Teff[i,j]=273.15+sum(Tz_gr[i,j]*np.exp(-z/L)*dz/L)/sum(np.exp(-z/L)*dz/L)
+            z = (1 - Zeta[i, j]) * H[i, j]
+            Tref=np.mean(Tz_gr[i,j,:][z<=500.])
+            if Tref>TsMin and Tref<TsMax and H[i,j]>1:
                 Mask[i,j]=1
-    return Teff, Mask
+    return Mask
 
 #Computes an initial semi-random emissivity field
 def InitEmissivity(L, frac):
-    Teff=ComputeTeff(L)[0]
-    Mask=ComputeTeff(L)[1]
+    Teff=ComputeTeff(L)
     TbObs=Tb*Mask
-    #Emissivity=TbObs/Teff
     Emissivity=np.ones(np.shape(Teff))
     Emissivity[Mask==1]=(TbObs/Teff)[Mask==1]
     Mask[Emissivity == -32768.0] = 0
     Emissivity[Mask==0]=0
 
-    Rand=np.random.normal(0, 0.001, np.size(Tb))
+    Rand=np.random.normal(0, 0.00, np.size(Tb))
     Rand=np.reshape(Rand,(np.shape(Tb)))
-    Ebarre=np.mean(Emissivity[Emissivity!=0])
+    Ebarre=1.0#np.mean(Emissivity[Emissivity!=0])
     Emissivity=Mask*(frac*Ebarre+(1-frac)*Emissivity+Rand)
-    return Emissivity, Mask
+    return Emissivity
 
 def ComputeJac(x):
     L=x[0]
-    #Mu=x[1]
-    E=x[1:]
-    E=np.reshape(E,np.shape(Tb))
     # Compute numerically the gradients along L
     Attempt1 = ComputeLagComponents(x)
     xdL=x
@@ -62,20 +66,18 @@ def ComputeJac(x):
     # The gradients along the Ei are computed analytically
     dLagdE=Attempt2[3]
     dLagdE=np.reshape(dLagdE,(1,np.size(dLagdE)))
+    dLagdx = np.concatenate(([dLagdL],  [Attempt1[2]], dLagdE[0]), axis=0)
 
-    dLagdx = np.concatenate(([dLagdL], dLagdE[0]), axis=0)
     return dLagdx
 
 #Computes the cost functions
 def ComputeLagComponents(x):
-    print("L:", x[0],"Max emiss:", max(x[1:]))
     L=x[0]
-    #Mu=x[1]
-    E=x[1:]
+    Mu=x[1]
+    E=x[2:]
     E=np.reshape(E,np.shape(Tb))
-
-    Teff=ComputeTeff(L)[0]
-    Mask=InitEmissivity(L, 0.)[1]
+    print("Depth:", L, "Mu:", Mu, "E:", np.mean(E[E!=0]))
+    Teff=ComputeTeff(L)
     TbObs=Mask*Tb
     Tbmod=E*Teff
     Teff1D=np.reshape(Teff, (1,np.size(Teff)))[0,:]
@@ -91,29 +93,23 @@ def ComputeLagComponents(x):
 
     #Compute normalized covariance = correlation
     m=np.stack((Emiss1D[Mask1D==1], Teff1D[Mask1D==1]), axis=0)
-    Sign=np.sign(np.cov(m)[0,1])
-
     sigmaE=np.std(Emiss1D[Mask1D==1])
     sigmaTe=np.std(Teff1D[Mask1D==1])
-    #J3=abs(np.cov(m)[0,1])/sigmaE/sigmaTe
     J3 =((np.cov(m)[0, 1])/sigmaE / sigmaTe)**2
 
     #Compute gradients along E
+    dLagdE=(2*Teff/N*(Tbmod-TbObs)+2*Lambda/N*(E-np.mean(Emiss1D[Mask1D==1]))+2*Mu/N/sigmaTe/sigmaE*J3**0.5*(E-np.mean(Emiss1D[Mask1D==1])))*Mask
+    dJ1dE=(2*Teff/N*(Tbmod-TbObs))*Mask
+    dJ3dE=(2/N/sigmaTe/sigmaE*J3**0.5*(E-np.mean(Emiss1D[Mask1D==1])))*Mask
 
-    #dLagdE=(2*Teff/N*(Tbmod-TbObs)+Sign*Mu/sigmaTe/sigmaE/N*(Teff-np.mean(Teff1D)*Mask))*Mask
-    dLagdE=(2*Teff/N*(Tbmod-TbObs)+2*Lambda/N*(E-np.mean(Emiss1D[Mask1D==1]))+Mu/N/sigmaTe/sigmaE*J3**0.5*(E-np.mean(Emiss1D[Mask1D==1])))*Mask
-
-    #print(2*Teff/N*(Tbmod-TbObs), Mu/N/sigmaTe/sigmaE*J3**0.5*(E-np.mean(Emiss1D[Mask1D==1])))
-    return J1, J2, J3, dLagdE, Teff
+    return J1, J2, J3, dLagdE, Teff, dJ1dE, dJ3dE
 
 def ComputeLagrangian(x):
     Solve=ComputeLagComponents(x)
     J1=Solve[0]
     J2=Solve[1]
     J3=Solve[2]
-    #Mu=Solve[3]
     print("J1", J1, "J3", J3)
-    #PlotEmiss(np.reshape(Emissivity, np.shape(Tb)))
     return J1+Mu*J3
 
 
@@ -129,6 +125,7 @@ def PlotEmiss(E):
     plt.show()
 
 def ComputeJ1(x):
+    print('J1')
     Solve=ComputeLagComponents(x)
     J1=Solve[0]
     return [J1]
@@ -136,7 +133,20 @@ def ComputeJ1(x):
 def ComputeJ3(x):
     Solve=ComputeLagComponents(x)
     J3=Solve[2]
+    print('J3:', J3)
     return [J3]
+
+def ComputeJacJ1(x):
+    print('JacJ1')
+    Solve=ComputeJacWC(x)
+    JacJ1=Solve[0]
+    return [JacJ1]
+
+def ComputeJacJ3(x):
+    Solve=ComputeJacWC(x)
+    JacJ3=Solve[1]
+    print('JacJ3')
+    return [JacJ3]
 
 ###################################################################################################
 #Here solve the optimization problem
@@ -159,17 +169,12 @@ Ts=Tz_gr[:,:,0]
 
 #Parameters for data analyse
 DeltaT=5
-SliceT=np.arange(-60,-5,DeltaT)
+SliceT=np.arange(-60,-15,DeltaT)
 print("Temperatures slices : ", SliceT)
 
 #For outputs
 FinalEmissivity=np.zeros(np.shape(Ts))
 FinalTeff=np.zeros(np.shape(Ts))
-J1s=[]
-J2s=[]
-J3s=[]
-Mus=[]
-Depths=[]
 
 #Work slice by slice
 for t in SliceT:
@@ -178,47 +183,32 @@ for t in SliceT:
     print("  ")
     print("Slice between ", TsMin, " and ", TsMax)
 
-    Depth=70/math.exp(0.036*t) #initiate with plausible depth
-    print(Depth)
-    Mu=10
+    Depth=200#70/math.exp(0.036*t) #initiate with plausible depth
+    Mu=100
     Lambda=0
-    Init=InitEmissivity(Depth, 0.1)
-    Emissivity=Init[0]
-    Mask=Init[1]
+    Mask=ComputeMask()
+    Emissivity=InitEmissivity(Depth, 0)
     dL=10
 
     Emissivity=np.reshape(Emissivity,(1,np.size(Emissivity)))
     Bounds=[(0,1)]*np.size(Emissivity)
+    Bounds.append((1e-3, 1000))
     Bounds.append((1,1000))
     Bounds.reverse()
-    print(np.size(Bounds))
-    x0=np.concatenate(([Depth], Emissivity[0]), axis=0)
-    #epsilon=np.concatenate(([1e5], np.ones(np.size(Emissivity))*5e-3), axis=0)
 
-    #here optimization with scipy
-    #BestValue=opt.fmin_cg(ComputeLagrangian,x0, gtol=1e-2, epsilon=epsilon, fprime=ComputeJac, disp=True)#, fprime=None)#, epsfcn=epsilon)
-    #BestValue=opt.fmin_tnc(ComputeLagrangian,x0, fprime=ComputeJac, epsilon=epsilon)#, fprime=None)#, epsfcn=epsilon)
-    #BestValue = opt.fmin_slsqp(ComputeJ1, x0, f_eqcons=ComputeJ3, fprime=ComputeJac)# epsilon=epsilon)  # , fprime=None)#, epsfcn=epsilon)
-    BestValue=opt.fmin_l_bfgs_b(ComputeLagrangian,x0, fprime=ComputeJac)# disp=100)#epsilon=epsilon, maxiter=15)#, fprime=None)#, epsfcn=epsilon)
+    x0=np.concatenate(([Depth], [Mu], Emissivity[0]), axis=0)
+    BestValue=opt.fmin_l_bfgs_b(ComputeLagrangian,x0, fprime=ComputeJac, bounds=Bounds, maxiter=200)
 
-    #print(BestValue)
+    print("Depth:",BestValue[0][0])
 
-    #Depths.append(Depth)
-    #J1s.append(J1)
-    #J3s.append(J3)
     Emissivity=np.reshape(Emissivity, np.shape(Mask))
     FinalEmissivity=FinalEmissivity+Mask*Emissivity
-
-print("Depths:" ,Depths)
-print("J1:", J1s)
-print("J3:", J3s)
 
 #for display
 FinalEmissivity[FinalEmissivity==0]=FinalEmissivity[112,100]
 
 Stop=time.time()
 print("Elapsed time", Stop-Start, "s")
-
 
 #Create new NetCDF file for Emissivity data
 nc_new = Dataset('../../SourceData/WorkingFiles/Emissivity_FromGradientDescent_Scipy.nc', 'w', format='NETCDF4')
