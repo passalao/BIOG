@@ -95,7 +95,7 @@ Us=Us*(3.9999-np.array(Mask))/3
 '''i=79#80#143#86#65
 j=93#94#147#165#167
 print(Ts[i,j], Tb_Obs[0,i,j])'''
-
+'''
 # scatterplot
 myplot=plt.scatter(Tb_Obs, Ts, c="Red", s=0.01)
 plt.plot([0, 270], [0, 270], color='b')
@@ -123,6 +123,7 @@ cbar.ax.set_xticklabels(['210', '270'])  # vertically oriented colorbar
 plt.autoscale(True)
 plt.axis('equal')
 #plt.savefig("../../OutputData/img/Error_SMOS-Mod_DMRTML.png")
+'''
 
 #Write output NetCDF file
 outfile = r'../../SourceData/WorkingFiles/TbSMOSandTsCrocus.nc'

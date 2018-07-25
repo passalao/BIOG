@@ -16,7 +16,7 @@ np.set_printoptions(threshold=np.nan)
 
 #Computes the effective temperature
 def ComputeTeff(L):
-    Teff=np.zeros(np.shape(H)
+    Teff=np.zeros(np.shape(H))
     #z = (1-Zeta)
     for i in np.arange(0,np.shape(H)[0], 1):
         for j in np.arange(0,np.shape(H)[1], 1):
@@ -26,6 +26,7 @@ def ComputeTeff(L):
                 Teff[i,j]=273.15+sum(Tz_gr[i,j]*np.exp(-z/L)*dz/L)/sum(np.exp(-z/L)*dz/L)
     return Teff
 
+#Computes mask corresponding to temperature ranges
 def ComputeMask():
     Mask=np.zeros(np.shape(H))
     for i in np.arange(0,np.shape(H)[0], 1):
@@ -45,9 +46,9 @@ def InitEmissivity(L, frac):
     Mask[Emissivity == -32768.0] = 0
     Emissivity[Mask==0]=0
 
-    Rand=np.random.normal(0, 0.00, np.size(Tb))
+    Rand=np.random.normal(0, 0.001, np.size(Tb))
     Rand=np.reshape(Rand,(np.shape(Tb)))
-    Ebarre=1.0#np.mean(Emissivity[Emissivity!=0])
+    Ebarre=np.mean(Emissivity[Emissivity!=0])
     Emissivity=Mask*(frac*Ebarre+(1-frac)*Emissivity+Rand)
     return Emissivity
 
@@ -109,9 +110,8 @@ def ComputeLagrangian(x):
     J1=Solve[0]
     J2=Solve[1]
     J3=Solve[2]
-    print("J1", J1, "J3", J3)
+    print("J1", J1, "J3", J3, "nbiteration:")
     return J1+Mu*J3
-
 
 def PlotEmiss(E):
     fig, ax = plt.subplots(nrows=1, ncols=1)
@@ -124,30 +124,6 @@ def PlotEmiss(E):
     plt.savefig("../../OutputData/img/InvertingEmissDepth/Emissivity_DescentGrad_nDim.png")
     plt.show()
 
-def ComputeJ1(x):
-    print('J1')
-    Solve=ComputeLagComponents(x)
-    J1=Solve[0]
-    return [J1]
-
-def ComputeJ3(x):
-    Solve=ComputeLagComponents(x)
-    J3=Solve[2]
-    print('J3:', J3)
-    return [J3]
-
-def ComputeJacJ1(x):
-    print('JacJ1')
-    Solve=ComputeJacWC(x)
-    JacJ1=Solve[0]
-    return [JacJ1]
-
-def ComputeJacJ3(x):
-    Solve=ComputeJacWC(x)
-    JacJ3=Solve[1]
-    print('JacJ3')
-    return [JacJ3]
-
 ###################################################################################################
 #Here solve the optimization problem
 ###################################################################################################
@@ -158,6 +134,8 @@ print("Load data")
 Obs = netCDF4.Dataset('../../SourceData/SMOS/SMOSL3_StereoPolar_AnnualMeanSansNDJ_TbV_52.5deg_xy.nc')
 Tb = Obs.variables['BT_V']
 Tb=Tb[0]
+X = Obs.variables['x_ease2']
+Y = Obs.variables['y_ease2']
 nc_obsattrs, nc_obsdims, nc_obsvars = ncr.ncdump(Obs)
 
 # Import temperature data
@@ -183,7 +161,7 @@ for t in SliceT:
     print("  ")
     print("Slice between ", TsMin, " and ", TsMax)
 
-    Depth=200#70/math.exp(0.036*t) #initiate with plausible depth
+    Depth=30/math.exp(0.036*t) #initiate with plausible depth, between T and M
     Mu=100
     Lambda=0
     Mask=ComputeMask()
@@ -206,55 +184,43 @@ for t in SliceT:
 
 #for display
 FinalEmissivity[FinalEmissivity==0]=FinalEmissivity[112,100]
+FinalEmissivity[FinalEmissivity>1]=1
 
 Stop=time.time()
 print("Elapsed time", Stop-Start, "s")
 
-#Create new NetCDF file for Emissivity data
-nc_new = Dataset('../../SourceData/WorkingFiles/Emissivity_FromGradientDescent_Scipy.nc', 'w', format='NETCDF4')
-nc_new.description = "Emissivity output from inversion of brightness temperature signal"
-
-#Create NetCDF dimensions
-for dim in nc_obsdims:
-    dim_name=dim
-    if dim=="rows":
-        dim_name="x"
-    if dim=="cols":
-        dim_name="y"
-    nc_new.createDimension(dim_name, Obs.dimensions[dim].size)
-nc_new.createVariable("Emissivity", 'float64', ('x','y'))
-nc_new.variables["Emissivity"][:] = FinalEmissivity[:, :]
-nc_new.createVariable("Teff", 'float64', ('x','y'))
-nc_new.variables["Teff"][:] = FinalTeff[:, :]
-nc_new.createVariable("Error", 'float64', ('x','y'))
-nc_new.variables["Error"][:] = FinalEmissivity[:,:]*FinalTeff[:, :]-Tb[:,:]
-nc_new.close()
-
 PlotEmiss(FinalEmissivity)
 
-'''#Create NetCDF file
-outfile = r'../../SourceData/WorkingFiles/Emissivity_FromGradientDescent_Scipy.nc'
-nc_new = netCDF4.Dataset(outfile, 'w', clobber=True)
+###################################################################################################
+#Data output
+###################################################################################################
 
+#Create NetCDF file
 cols = len(X[0,:])
 rows = len(Y[:,0])
 
-Xout = nc_new.createDimension('x', cols)
-Xout = nc_new.createVariable('x', 'f4', ('x',))
-Xout.standard_name = 'x'
-Xout.units = 'm'
-Xout.axis = "X"
-Xout[:] = X[0,:]-25000
+outfile = r'../../SourceData/WorkingFiles/Emissivity_FromGradientDescent_Scipy4QGIS_250m.nc'
+nc_new = netCDF4.Dataset(outfile, 'w', clobber=True)
+
 Yout = nc_new.createDimension('y', rows)
 Yout = nc_new.createVariable('y', 'f4', ('y',))
 Yout.standard_name = 'y'
 Yout.units = 'm'
 Yout.axis = "Y"
 Yout[:] = Y[:,0]+25000
+Xout = nc_new.createDimension('x', cols)
+Xout = nc_new.createVariable('x', 'f4', ('x',))
+Xout.standard_name = 'x'
+Xout.units = 'm'
+Xout.axis = "X"
+Xout[:] = X[0,:]-25000
 
 nc_new.createVariable("Emissivity", 'float64', ('y','x'))
-nc_new.variables["Emissivity"][:] = FinalEmissivity[::-1,:]
+nc_new.variables["Emissivity"][:] = FinalEmissivity[::-1, :]
+nc_new.createVariable("Teff", 'float64', ('y','x'))
+nc_new.variables["Teff"][:] = FinalTeff[::-1, :]
+nc_new.createVariable("Error", 'float64', ('y','x'))
+nc_new.variables["Error"][:] = FinalEmissivity[::-1,:]*FinalTeff[::-1, :]-Tb[::-1,:]
 crs = nc_new.createVariable('spatial_ref', 'i4')
 crs.spatial_ref='PROJCS["WGS_84_NSIDC_EASE_Grid_2_0_South",GEOGCS["GCS_WGS_1984",DATUM["D_WGS_1984",SPHEROID["WGS_1984",6378137,298.257223563]],PRIMEM["Greenwich",0],UNIT["Degree",0.017453292519943295]],PROJECTION["Lambert_Azimuthal_Equal_Area"],PARAMETER["latitude_of_origin",-90],PARAMETER["central_meridian",0],PARAMETER["false_easting",0],PARAMETER["false_northing",0],UNIT["Meter",1]]'
-nc_new.close()'''
-
+nc_new.close()
