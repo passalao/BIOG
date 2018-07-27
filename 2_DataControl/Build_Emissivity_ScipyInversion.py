@@ -27,14 +27,18 @@ def ComputeTeff(L):
     return Teff
 
 #Computes mask corresponding to temperature ranges
-def ComputeMask():
+def ComputeMask(Zone):
     Mask=np.zeros(np.shape(H))
     for i in np.arange(0,np.shape(H)[0], 1):
         for j in np.arange(0,np.shape(H)[1], 1):
             z = (1 - Zeta[i, j]) * H[i, j]
             Tref=np.mean(Tz_gr[i,j,:][z<=500.])
-            if Tref>TsMin and Tref<TsMax and H[i,j]>1:
-                Mask[i,j]=1
+            if Zone == "East":
+                if Tref>TsMin and Tref<TsMax and H[i,j]>1 and j>=112:
+                    Mask[i,j]=1
+            if Zone == "West":
+                if Tref>TsMin and Tref<TsMax and H[i,j]>1 and j<112:
+                    Mask[i,j]=1
     return Mask
 
 #Computes an initial semi-random emissivity field
@@ -110,7 +114,7 @@ def ComputeLagrangian(x):
     J1=Solve[0]
     J2=Solve[1]
     J3=Solve[2]
-    print("J1", J1, "J3", J3, "nbiteration:")
+    print("J1", J1, "J3", J3)
     return J1+Mu*J3
 
 def PlotEmiss(E):
@@ -146,41 +150,58 @@ Tz_gr = GRISLI.variables['T']
 Ts=Tz_gr[:,:,0]
 
 #Parameters for data analyse
-DeltaT=5
-SliceT=np.arange(-60,-15,DeltaT)
-print("Temperatures slices : ", SliceT)
+#DeltaT=5
+#SliceT=np.arange(-60,-15,DeltaT)
+#Temperatures=[-60,-50,-45,-40,-35,-30,-25]#for East
+#Temperatures=[-40,-35,-30,-25,-20,-15,-10]#for West
+
+#print("Temperatures slices : ", SliceT)
 
 #For outputs
 FinalEmissivity=np.zeros(np.shape(Ts))
 FinalTeff=np.zeros(np.shape(Ts))
 
 #Work slice by slice
-for t in SliceT:
+'''for t in SliceT:
     TsMax = t + DeltaT
-    TsMin = t
-    print("  ")
-    print("Slice between ", TsMin, " and ", TsMax)
+    TsMin = t'''
 
-    Depth=30/math.exp(0.036*t) #initiate with plausible depth, between T and M
-    Mu=100
-    Lambda=0
-    Mask=ComputeMask()
-    Emissivity=InitEmissivity(Depth, 0)
-    dL=10
+Zones=["East"]#, "West"]
 
-    Emissivity=np.reshape(Emissivity,(1,np.size(Emissivity)))
-    Bounds=[(0,1)]*np.size(Emissivity)
-    Bounds.append((1e-3, 1000))
-    Bounds.append((1,1000))
-    Bounds.reverse()
+for z in Zones:
+    if z=="East":
+        Temperatures = [-60, -55, -52.5, -50, -45, -40, -35, -30, -25]
+    if z=="West":
+        Temperatures = [-45, -40, -35, -30, -25, -20, -15, -10]
 
-    x0=np.concatenate(([Depth], [Mu], Emissivity[0]), axis=0)
-    BestValue=opt.fmin_l_bfgs_b(ComputeLagrangian,x0, fprime=ComputeJac, bounds=Bounds, maxiter=200)
+    i=0
+    for t in Temperatures[0:-1]:
+        TsMax = Temperatures[i+1]
+        TsMin = t
+        i=i+1
+        print("  ")
+        print("Slice between ", TsMin, " and ", TsMax)
 
-    print("Depth:",BestValue[0][0])
+        Depth=30/math.exp(0.036*t) #initiate with plausible depth, between T and M
+        Mu=100
+        Lambda=0
+        Mask=ComputeMask(z)
+        Emissivity=InitEmissivity(Depth, 0)
+        dL=10
 
-    Emissivity=np.reshape(Emissivity, np.shape(Mask))
-    FinalEmissivity=FinalEmissivity+Mask*Emissivity
+        Emissivity=np.reshape(Emissivity,(1,np.size(Emissivity)))
+        Bounds=[(0,1)]*np.size(Emissivity)
+        Bounds.append((1e-3, 1000))
+        Bounds.append((1,1000))
+        Bounds.reverse()
+
+        x0=np.concatenate(([Depth], [Mu], Emissivity[0]), axis=0)
+        BestValue=opt.fmin_l_bfgs_b(ComputeLagrangian,x0, fprime=ComputeJac, bounds=Bounds, maxiter=200)
+
+        print("Depth:",BestValue[0][0])
+
+        Emissout=np.reshape(BestValue[0][2:], np.shape(Mask))
+        FinalEmissivity=FinalEmissivity+Mask*Emissout
 
 #for display
 FinalEmissivity[FinalEmissivity==0]=FinalEmissivity[112,100]
@@ -199,7 +220,7 @@ PlotEmiss(FinalEmissivity)
 cols = len(X[0,:])
 rows = len(Y[:,0])
 
-outfile = r'../../SourceData/WorkingFiles/Emissivity_FromGradientDescent_Scipy4QGIS_250m.nc'
+outfile = r'../../SourceData/WorkingFiles/Emissivity_FromGradientDescent_Scipy4QGIS.nc'
 nc_new = netCDF4.Dataset(outfile, 'w', clobber=True)
 
 Yout = nc_new.createDimension('y', rows)

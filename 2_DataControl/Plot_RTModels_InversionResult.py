@@ -39,18 +39,26 @@ T_inv=np.arange(-60,-15,5)+273.15+2.5
 L_inv=np.array([800,770,486,423,435,356,236,192,163])#633,412,332,282,241,206,177,152,132,115])
 L_inv=np.array([450, 880,451, 221, 166, 145, 248, 113, 121]) #633,412,332,282,241,206,177,152,132,115])
 L_inv=np.array([760,517,391,171,136,125,198,83,71]) #633,412,332,282,241,206,177,152,132,115])
+#L_inv=np.array([460,707,501,351,286,295,238,373,91]) #East Antarctica
+T_inv=np.array([-57.5,-50,-45,-40,-35,-30])+273.15+2.5#for East
+L_inv=np.array([448,301,331,286,255,258]) #East Antarctica
 
-
-E_inv=1/L_inv
 E_inv=l/(4*math.pi*L_inv)*(Real_E[0])**0.5
+
+T_inv2=np.arange(-40,-15,5)+273.15+2.5
+L_inv2=np.array([376,235,198,103, 101]) #West Antarctica
+
+E_inv2=l/(4*math.pi*L_inv2)*(Real_E[0])**0.5
+
 
 #L=l/(4*math.pi)/Im_EMatzler*(Real_E[0])**0.5
 
 #E_inv=5e-8*np.exp(0.036*T_inv)
 
-plt.plot(T, Im_ETiuri*1e3, c='r', label="Tiuri")
+plt.plot(T, Im_ETiuri*1e3, c='darkorange', label="Tiuri")
 plt.plot(T, Im_EMatzler*1e3, c='b', label="Mätzler")
-plt.scatter(T_inv, E_inv*1e3, label="From inversion", marker="+", s=50, c="darkorange")
+plt.scatter(T_inv, E_inv*1e3, label="From inversion, East", marker="D", s=20, c="r")
+plt.scatter(T_inv2, E_inv2*1e3, label="From inversion, West", marker="D", s=20, c="darkgreen")
 plt.xlabel("Ice temperature (K)")
 plt.ylabel(r"$\epsilon'' \times$ 1e3")
 plt.legend()
