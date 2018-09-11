@@ -1,3 +1,6 @@
+#################################################################
+#Compute the inversion of penetration depth and emissivity field#
+#################################################################
 from netCDF4 import Dataset  # http://code.google.com/p/netcdf4-python/
 import netCDF4, math
 import matplotlib.pyplot as plt
@@ -58,20 +61,24 @@ def InitEmissivity(L, frac):
 
 def ComputeJac(x):
     L=x[0]
+    E=x[2:]
     # Compute numerically the gradients along L
     Attempt1 = ComputeLagComponents(x)
+    print(L, Attempt1[0], Attempt1[1], np.std(E[E!=0]), Mu)
+
     xdL=x
     xdL[0]=L+dL
     Attempt2 = ComputeLagComponents(xdL)
+
     dJ1dL = (Attempt2[0] - Attempt1[0]) / dL
-    dJ2dL = (Attempt2[1] - Attempt1[1]) / dL
-    dJ3dL = (Attempt2[2] - Attempt1[2]) / dL
-    dLagdL = (dJ1dL + Lambda * dJ2dL + Mu * dJ3dL)
+    #dJ2dL = (Attempt2[1] - Attempt1[1]) / dL
+    dJ3dL = (Attempt2[1] - Attempt1[1]) / dL
+    dLagdL = (dJ1dL + Mu * dJ3dL)
 
     # The gradients along the Ei are computed analytically
-    dLagdE=Attempt2[3]
+    dLagdE=Attempt2[2]
     dLagdE=np.reshape(dLagdE,(1,np.size(dLagdE)))
-    dLagdx = np.concatenate(([dLagdL],  [Attempt1[2]], dLagdE[0]), axis=0)
+    dLagdx = np.concatenate(([dLagdL],  [Attempt1[1]], dLagdE[0]), axis=0)
 
     return dLagdx
 
@@ -81,7 +88,7 @@ def ComputeLagComponents(x):
     Mu=x[1]
     E=x[2:]
     E=np.reshape(E,np.shape(Tb))
-    print("Depth:", L, "Mu:", Mu, "E:", np.mean(E[E!=0]))
+    #print("Depth:", L, "Mu:", Mu, "E:", np.mean(E[E!=0]))
     Teff=ComputeTeff(L)
     TbObs=Mask*Tb
     Tbmod=E*Teff
@@ -94,7 +101,7 @@ def ComputeLagComponents(x):
     N=np.size(Mask[Mask==1])
 
     J1=(np.sum((Tbmod1D[Tbmod1D!=0]-TbObs1D[Tbmod1D!=0])**2)/N)#np.size(Tbmod1D[Tbmod1D!=0]))
-    J2=np.sum((Emiss1D[Emiss1D!=0]-1)**2)/N#np.size(Tbmod1D[Tbmod1D!=0])
+    #J2=np.sum((Emiss1D[Emiss1D!=0]-1)**2)/N#np.size(Tbmod1D[Tbmod1D!=0])
 
     #Compute normalized covariance = correlation
     m=np.stack((Emiss1D[Mask1D==1], Teff1D[Mask1D==1]), axis=0)
@@ -107,14 +114,14 @@ def ComputeLagComponents(x):
     dJ1dE=(2*Teff/N*(Tbmod-TbObs))*Mask
     dJ3dE=(2/N/sigmaTe/sigmaE*J3**0.5*(E-np.mean(Emiss1D[Mask1D==1])))*Mask
 
-    return J1, J2, J3, dLagdE, Teff, dJ1dE, dJ3dE
+    return J1, J3, dLagdE, Teff, dJ1dE, dJ3dE
 
 def ComputeLagrangian(x):
     Solve=ComputeLagComponents(x)
     J1=Solve[0]
-    J2=Solve[1]
-    J3=Solve[2]
-    print("J1", J1, "J3", J3)
+    #J2=Solve[1]
+    J3=Solve[1]
+    #print("J1", J1, "J3", J3)
     return J1+Mu*J3
 
 def PlotEmiss(E):
@@ -182,11 +189,11 @@ for z in Zones:
         print("  ")
         print("Slice between ", TsMin, " and ", TsMax)
 
-        Depth=30/math.exp(0.036*t) #initiate with plausible depth, between T and M
-        Mu=100
+        Depth=25/math.exp(0.036*t) #initiate with plausible depth, between T and M
+        Mu=10
         Lambda=0
         Mask=ComputeMask(z)
-        Emissivity=InitEmissivity(Depth, 0)
+        Emissivity=InitEmissivity(Depth,0)
         dL=10
 
         Emissivity=np.reshape(Emissivity,(1,np.size(Emissivity)))
