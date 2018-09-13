@@ -53,7 +53,7 @@ def InitEmissivity(L, frac):
     Mask[Emissivity == -32768.0] = 0
     Emissivity[Mask==0]=0
 
-    Rand=np.random.normal(0, 0.001, np.size(Tb))
+    Rand=np.random.normal(0, 0.00, np.size(Tb))
     Rand=np.reshape(Rand,(np.shape(Tb)))
     Ebarre=np.mean(Emissivity[Emissivity!=0])
     Emissivity=Mask*(frac*Ebarre+(1-frac)*Emissivity+Rand)
@@ -61,10 +61,11 @@ def InitEmissivity(L, frac):
 
 def ComputeJac(x):
     L=x[0]
+    Mu=x[1]
     E=x[2:]
     # Compute numerically the gradients along L
     Attempt1 = ComputeLagComponents(x)
-    print(L, Attempt1[0], Attempt1[1], np.std(E[E!=0]), Mu)
+    print(L, Attempt1[0], Attempt1[1], np.mean(E[E!=0]), np.std(E[E!=0]), Mu)
 
     xdL=x
     xdL[0]=L+dL
@@ -173,11 +174,11 @@ FinalTeff=np.zeros(np.shape(Ts))
     TsMax = t + DeltaT
     TsMin = t'''
 
-Zones=["East"]#, "West"]
+Zones=["East", "West"]
 
 for z in Zones:
     if z=="East":
-        Temperatures = [-60, -55, -52.5, -50, -45, -40, -35, -30, -25]
+        Temperatures = [-60,-55,-50, -45, -40, -35, -30, -25]
     if z=="West":
         Temperatures = [-45, -40, -35, -30, -25, -20, -15, -10]
 
@@ -190,7 +191,7 @@ for z in Zones:
         print("Slice between ", TsMin, " and ", TsMax)
 
         Depth=25/math.exp(0.036*t) #initiate with plausible depth, between T and M
-        Mu=10
+        Mu=100
         Lambda=0
         Mask=ComputeMask(z)
         Emissivity=InitEmissivity(Depth,0)

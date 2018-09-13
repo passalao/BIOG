@@ -19,18 +19,60 @@ import scipy.optimize as opt
 Obs = netCDF4.Dataset('../../SourceData/Vent/MaxWind.nc')
 Wind = Obs.variables['Wind']
 
+# Import Accu data
+Obs = netCDF4.Dataset('../../SourceData/Accu/Arthern2006_align.nc', nodata="--")
+Accu = Obs.variables['Band1']
+
 # Import Emissivity data
 Obs = netCDF4.Dataset('../../SourceData/WorkingFiles/Emissivity_FromMatzler.nc')#radientDescent_Scipy4QGIS.nc')
 E = Obs.variables['Emissivity']
 
-#Resize the Wind file
+#Resize the Wind and Accu files
 Wind=Wind[:,3:-3]
+Accu=Accu[:,1:-1]
+
+'''fig, ax = plt.subplots(nrows=1, ncols=1)
+#norm = mpl.colors.Normalize(vmin=10, vmax=30)
+norm = mpl.colors.Normalize(vmin=0.95, vmax=1)
+cmap = mpl.cm.spectral
+print(np.shape(E))
+myplot = ax.pcolormesh(E[:,112:224], cmap=cmap, norm=norm)
+#cbar = fig.colorbar(myplot, ticks=np.arange(0.90, 1.01, 0.02))
+#cbar.set_label('Emissivity', rotation=270)
+#cbar.ax.set_xticklabels(['0.95', '0.96', '0.97', '0.98', '0.99', '1.0'])
+plt.show()'''
+
+
+#Selection : East Antarctica, or West Antarctica
+Zone="East"#"West"
+if Zone=="East":
+    E=E[:,112:224]
+    Wind = Wind[:,112:224]
+    Accu = Accu[:,112:224]
+
+if Zone=="West":
+    E=E[:,0:112]
+    Wind = Wind[:,0:112]
+    Accu = Accu[:, 0:112]
+
+#Selection : Accumulation or Wind
+
+
 Wind1D=np.reshape(Wind, (1, np.size(Wind)))
+Accu1D=np.reshape(Accu, (1, np.size(Accu)))
+Accu1D[Accu1D>1e+38]=0.0
+
 E1D=np.reshape(E, (1, np.size(E)))
 Wind1D=Wind1D[E1D<1]
+Accu1D=Accu1D[E1D<1]
 E1D=E1D[E1D<1]
-x=Wind1D[E1D>0.95]
+
+#x=Wind1D[E1D>0.95]
+x=Accu1D[E1D>0.95]
 y=E1D[E1D>0.95]
+
+y=y[x>0]
+x=x[x>0]
 
 ##############################################################
 #Plot kernel density
@@ -38,25 +80,39 @@ import pandas as pd
 import seaborn as sns
 sns.set(style="white")
 
-x1 = pd.Series(x, name="Wind speed (m/s)")
-x2 = pd.Series(y, name="Emissivity")
-
 # Show the joint distribution using kernel density estimation
-g = sns.kdeplot(x1, x2, shade=True)
-plt.xlim(10,24)
-plt.ylim(0.95,1)
+x1 = pd.Series(x)#, name="Wind speed (m/s)")
+x2 = pd.Series(y)#, name="Emissivity")
+g = sns.kdeplot(x1, x2, shade=True)# ,cmap=Color)
 
-#plot the regression line, on a selection of points
-y=y[x<16]
-x=x[x<16]
+#Plot the regression line, on a selection of points
+'''y=y[x<18]
+x=x[x<18]
+y=y[x>12]
+x=x[x>12]'''
+
+y=y[x<0.18]
+x=x[x<0.18]
+y=y[x>0.1]
+x=x[x>0.1]
+
 from sklearn import linear_model
 regr = linear_model.RANSACRegressor()
 regr.fit(x[:,np.newaxis], y)
-x_test = np.linspace(np.min(x), np.max(x), 100)
-plt.plot(x_test, regr.predict(x_test[:,np.newaxis]), color='blue', linewidth=1)
-#inliers and outliers of the RANSAC process
-#inlier_mask=regr.inlier_mask_
-#outlier_mask = np.logical_not(inlier_mask)
-#plt.scatter(x[outlier_mask], y[outlier_mask], color='gold', marker='.',label='Outliers')
+print("Coef : ", regr.estimator_.coef_)
+x_test = np.linspace(10, 24, 100)
+x_test = np.linspace(0, 0.5, 100)
 
+#plt.plot(x_test, regr.predict(x_test[:,np.newaxis]), color='blue', linewidth=1)
+
+#Design of the plot features
+#plt.xlim(10,28)
+plt.xlim(0,0.3)
+plt.ylim(0.95,1)
+plt.xlabel('Wind speed (m/s)', fontsize=17)
+plt.xlabel('Accumulation (m/a)', fontsize=17)
+plt.ylabel('Emissivity', fontsize=17)
+plt.xticks(fontsize=15)
+plt.yticks(fontsize=15)
+plt.text(11,.955, Zone, size=17)
 plt.show()

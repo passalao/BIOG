@@ -53,15 +53,28 @@ T_inv2=np.arange(-40,-15,5)+273.15+2.5
 L_inv2=np.array([376,235,198,103, 101]) #West Antarctica
 E_inv2=l/(4*math.pi*L_inv2)*(Real_E[0])**0.5
 
+#Discrepancy between retrieval and Mätzler
+Im_EMatzler_controlEast=Permittivity("Matzler", T_inv, rho, freq)[1]
+DiscE=(Im_EMatzler_controlEast-E_inv)#/np.size(T_inv)
+Im_EMatzler_controlWest=Permittivity("Matzler", T_inv2, rho, freq)[1]
+DiscW=(Im_EMatzler_controlWest[0:3]-E_inv2[0:3])#/np.size(E_inv2[0:2])
+Disc=np.concatenate((DiscE, DiscW))
+Disc=Disc/np.size(Disc)
+Discrepancy=(np.dot(Disc, Disc))**0.5
+
+print(Discrepancy)
 ##############################################################
 #Plot
 plt.plot(T, StartE*1e3, c='k', linestyle='--', linewidth=0.5, label="Initial guess")
 plt.plot(T, Im_ETiuri*1e3, c='darkorange', label="Tiuri")
 plt.plot(T, Im_EMatzler*1e3, c='b', label="Mätzler")
-plt.scatter(T_inv, E_inv*1e3, label="From inversion, East", marker="D", s=20, c="r")
-plt.scatter(T_inv2, E_inv2*1e3, label="From inversion, West", marker="D", s=20, c="darkgreen")
-plt.xlabel("Ice temperature (K)")
-plt.ylabel(r"$\epsilon'' \times$ 1e3")
-plt.legend()
+plt.scatter(T_inv, E_inv*1e3, label="From retrieval, East", marker="D", s=20, c="r")
+plt.scatter(T_inv2, E_inv2*1e3, label="From retrieval, West", marker="D", s=20, c="darkgreen")
+plt.xlabel("Ice temperature (K)", fontsize=15)
+plt.ylabel(r"$\epsilon'' \times$ 1e3", fontsize=15)
+plt.xticks(fontsize=13)
+plt.yticks(fontsize=13)
+plt.xlim([210,268])
+plt.legend(fontsize=13)
 plt.grid()
 plt.show()
