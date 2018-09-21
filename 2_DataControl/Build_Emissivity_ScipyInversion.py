@@ -11,6 +11,7 @@ sys.path.insert(0, "/home/passalao/Documents/SMOS-FluxGeo/BIOG")
 import BIOG
 import NC_Resources as ncr
 import scipy.optimize as opt
+import scipy.interpolate as interp
 np.set_printoptions(threshold=np.nan)
 
 ###################################################################################################
@@ -24,10 +25,25 @@ def ComputeTeff(L):
     for i in np.arange(0,np.shape(H)[0], 1):
         for j in np.arange(0,np.shape(H)[1], 1):
             if Mask[i,j]==1:
-                z = (1 - Zeta[i, j]) * H[i, j]
+                '''z = (1 - Zeta[i, j]) * H[i, j]
                 dz=0.05*H[i,j]
-                Teff[i,j]=273.15+sum(Tz_gr[i,j]*np.exp(-z/L)*dz/L)/sum(np.exp(-z/L)*dz/L)
+                Teff[i,j]=273.15+sum(Tz_gr[i,j]*np.exp(-z/L)*dz/L)/sum(np.exp(-z/L)*dz/L)'''
+
+                #Gauss-Legendre integration (default interval is [-1, 1])
+                deg = 4
+                x, w = np.polynomial.legendre.leggauss(deg)
+                # Translate x values from the interval [-1, 1] to [a, b]
+                a=0
+                b=1
+                t = 0.5 * (x + 1) * (b - a) + a
+                Teff[i, j] = 273.15+sum(w * Integrand(t,Tz_gr[i, j], L, H[i, j])) * 0.5 * (b - a)
     return Teff
+
+def Integrand(zeta,Tz,L,H):
+    Tinterp=interp.interp1d(np.linspace(0,1,21), Tz)
+    T=Tinterp(zeta)
+    return T *H* np.exp(-zeta*H / L) / L
+
 
 #Computes mask corresponding to temperature ranges
 def ComputeMask(Zone):
@@ -65,7 +81,7 @@ def ComputeJac(x):
     E=x[2:]
     # Compute numerically the gradients along L
     Attempt1 = ComputeLagComponents(x)
-    print(L, Attempt1[0], Attempt1[1], np.mean(E[E!=0]), np.std(E[E!=0]), Mu)
+    #print(L, Attempt1[0], Attempt1[1], np.mean(E[E!=0]), np.std(E[E!=0]), Mu)
 
     xdL=x
     xdL[0]=L+dL
@@ -89,7 +105,7 @@ def ComputeLagComponents(x):
     Mu=x[1]
     E=x[2:]
     E=np.reshape(E,np.shape(Tb))
-    #print("Depth:", L, "Mu:", Mu, "E:", np.mean(E[E!=0]))
+    print("Depth:", L, "Mu:", Mu, "E:", np.mean(E[E!=0]))
     Teff=ComputeTeff(L)
     TbObs=Mask*Tb
     Tbmod=E*Teff
@@ -98,6 +114,7 @@ def ComputeLagComponents(x):
     TbObs1D=np.reshape(TbObs, (1,np.size(TbObs)))[0,:]
     Emiss1D=np.reshape(E, (1,np.size(Emissivity)))[0,:]
     Mask1D=np.reshape(Mask, (1,np.size(Teff)))[0,:]
+    #print("Too high: ", np.size(Emiss1D[Emiss1D==1])/np.size(Emiss1D), "%")
 
     N=np.size(Mask[Mask==1])
 

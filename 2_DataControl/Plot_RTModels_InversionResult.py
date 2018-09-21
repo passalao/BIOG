@@ -45,8 +45,12 @@ Real_E=Permittivity("Tiuri", T, rho, freq)[0]
 StartL=25/np.exp(0.036*(T-273.15))
 StartE=l/(4*math.pi*StartL)*(Real_E[0])**0.5
 
-T_inv=np.array([-57.5,-50,-45,-40,-35,-30])+273.15+2.5#for East
-L_inv=np.array([448,301,331,286,255,258]) #East Antarctica
+#T_inv=np.array([-57.5,-50,-45,-40,-35,-30])+273.15+2.5#for East
+#L_inv=np.array([448,301,331,286,255,258]) #East Antarctica
+
+T_inv=np.arange(-60,-25,5)+273.15+2.5
+L_inv=np.array([446,531,411,306,265,138,123]) #East Antarctica
+
 E_inv=l/(4*math.pi*L_inv)*(Real_E[0])**0.5
 
 T_inv2=np.arange(-40,-15,5)+273.15+2.5
@@ -67,7 +71,9 @@ print(Discrepancy)
 #Plot
 plt.plot(T, StartE*1e3, c='k', linestyle='--', linewidth=0.5, label="Initial guess")
 plt.plot(T, Im_ETiuri*1e3, c='darkorange', label="Tiuri")
+#plt.plot(T, Im_EMatzler*1e3*1.2, c='b', label="Mätzler")
 plt.plot(T, Im_EMatzler*1e3, c='b', label="Mätzler")
+
 plt.scatter(T_inv, E_inv*1e3, label="From retrieval, East", marker="D", s=20, c="r")
 plt.scatter(T_inv2, E_inv2*1e3, label="From retrieval, West", marker="D", s=20, c="darkgreen")
 plt.xlabel("Ice temperature (K)", fontsize=15)
