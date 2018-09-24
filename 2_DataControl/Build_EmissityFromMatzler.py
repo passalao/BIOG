@@ -3,14 +3,9 @@ import netCDF4, math
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 import numpy as np
-import sys, time
-sys.path.insert(0, "/home/passalao/Documents/SMOS-FluxGeo/BIOG")
-import BIOG
 import NC_Resources as ncr
-import scipy.optimize as opt
 import scipy.interpolate as interp
-import scipy.integrate as sciint
-np.set_printoptions(threshold=np.nan)
+#np.set_printoptions(threshold=np.nan)
 
 ###################################################################################################
 #Functions
@@ -25,16 +20,15 @@ def ComputeTeff():
         for j in np.arange(0,np.shape(H)[1], 1):
             if H[i,j]>1.0:
                 Perm = Permittivity(Tz_gr[i, j])
-                #print(Perm)
                 Lz = l / (4 * math.pi * Perm[1, :]) * (Perm[0,:]) ** 0.5
                 z = (1 - Zeta[i, j]) * H[i, j]
                 dz=0.05*H[i,j]
-                #zeta=np.linspace(0,1,21)
+
                 '''IntExp=np.zeros(np.size(Lz))
                 for k in np.arange(0,np.size(Lz)-1,1):
                     IntExp[k]=sum(((1/Lz[0:-2]+1/Lz[1:-1])/2*dz)[0:k])'''
 
-                #Computation of effective temperature. It seems OK, a bit low maybe
+                #Computation of effective temperature. It seems OK, a bit low maybe. It is better with GL integration.
                 #Teff[i,j]=sum((Tz_gr[i,j][0:-2]/Lz[0:-2]*np.exp(-IntExp[0:-2])+(Tz_gr[i,j][1:-1]/Lz[1:-1]*np.exp(-IntExp[1:-1])))/2*dz)
 
                 #Gauss-Legendre integration (default interval is [-1,1])
@@ -44,7 +38,6 @@ def ComputeTeff():
                 b=1
                 t = 0.5 * (x + 1) * (b - a) + a
                 Teff[i, j] = sum(w * Integrand(t,Tz_gr[i, j], Lz, H[i, j])) * 0.5 * (b - a)
-                print(Teff[i,j])
     return Teff
 
 def Integrand2(zeta2, Lz2,H):
@@ -61,11 +54,14 @@ def Integrand(zeta,Tz,Lz,H):
     # Gauss-Legendre integration (default interval is [-1,1])
     deg = 10
     x1, w1 = np.polynomial.legendre.leggauss(deg)
-    a1 = 0
-    b1 = zeta
-    t1 = 0.5 * (x1 + 1) * (b1 - a1) + a1
-    IntExp = sum(w1 * Integrand2(t1,L,H) * 0.5 * (b1 - a1))
-    #return T *H* np.exp(-zeta*H / L) / L
+    IntExp=np.zeros(np.size(T))
+
+    for k in np.arange(0, np.size(T),1):
+        a1 = 0
+        b1 = zeta[k]
+        t1 = 0.5 * (x1 + 1) * (b1 - a1) + a1
+        IntExp[k] = sum(w1 * Integrand2(t1,L,H) * 0.5 * (b1 - a1))
+
     return T * H * np.exp(-IntExp) / L
 
 def Permittivity(T):
@@ -88,9 +84,9 @@ def Permittivity(T):
 
 def PlotEmiss(E):
     fig, ax = plt.subplots(nrows=1, ncols=1)
-    norm = mpl.colors.Normalize(vmin=0.9, vmax=1.)
+    norm = mpl.colors.Normalize(vmin=0.95, vmax=1.0)
     cmap = mpl.cm.spectral
-    myplot = ax.pcolormesh(E, cmap=cmap)#, norm=norm)
+    myplot = ax.pcolormesh(E, cmap=cmap, norm=norm)
     cbar = fig.colorbar(myplot, ticks=np.arange(0.9, 1.01, 0.02))
     cbar.set_label('Emissivity', rotation=270)
     cbar.ax.set_xticklabels(['0.95', '0.96', '0.97', '0.98', '0.99', '1.0'])
@@ -100,7 +96,6 @@ def PlotEmiss(E):
 ###################################################################################################
 #Here load data and compute emissivity
 ###################################################################################################
-Start=time.time()
 
 # Import SMOS data
 print("Load data")
@@ -113,6 +108,7 @@ nc_obsattrs, nc_obsdims, nc_obsvars = ncr.ncdump(Obs)
 
 # Import temperature data
 GRISLI = netCDF4.Dataset('../../SourceData/WorkingFiles/TB40S123_1_Corrected4Ts.nc')
+#GRISLI = netCDF4.Dataset('../../SourceData/GRISLI/Avec_FoxMaule/Corrected_Tz_MappedonSMOS.nc')
 H = np.array(GRISLI.variables['H'])
 Zeta = GRISLI.variables['Zeta']
 Tz_gr = GRISLI.variables['T']
@@ -128,10 +124,8 @@ Emissivity[Mask == 1] = (TbObs / Teff)[Mask == 1]
 Mask[Emissivity == -32768.0] = 0
 Emissivity[Mask == 0] = 0
 
-#PlotEmiss(Mask)
 Emissivity=Emissivity*Mask
-
-#PlotEmiss(Teff)
+TeTs=Teff-Ts-273.15
 PlotEmiss(Emissivity)
 
 ###################################################################################################
@@ -142,7 +136,7 @@ PlotEmiss(Emissivity)
 cols = len(X[0,:])
 rows = len(Y[:,0])
 
-outfile = r'../../SourceData/WorkingFiles/Emissivity_FromMatzler_GaussLegendre.nc'
+'''outfile = r'../../SourceData/WorkingFiles/Emissivity_FromMatzler_GaussLegendre.nc'
 nc_new = netCDF4.Dataset(outfile, 'w', clobber=True)
 
 Yout = nc_new.createDimension('y', rows)
@@ -164,6 +158,8 @@ nc_new.createVariable("Teff", 'float64', ('y','x'))
 nc_new.variables["Teff"][:] = Teff[::-1, :]
 nc_new.createVariable("Error", 'float64', ('y','x'))
 nc_new.variables["Error"][:] = Emissivity[::-1,:]*Teff[::-1, :]-Tb[::-1,:]
+nc_new.createVariable("TE-Ts", 'float64', ('y','x'))
+nc_new.variables["TE-Ts"][:] = TeTs[::-1, :]
 crs = nc_new.createVariable('spatial_ref', 'i4')
 crs.spatial_ref='PROJCS["WGS_84_NSIDC_EASE_Grid_2_0_South",GEOGCS["GCS_WGS_1984",DATUM["D_WGS_1984",SPHEROID["WGS_1984",6378137,298.257223563]],PRIMEM["Greenwich",0],UNIT["Degree",0.017453292519943295]],PROJECTION["Lambert_Azimuthal_Equal_Area"],PARAMETER["latitude_of_origin",-90],PARAMETER["central_meridian",0],PARAMETER["false_easting",0],PARAMETER["false_northing",0],UNIT["Meter",1]]'
-nc_new.close()
+nc_new.close()'''

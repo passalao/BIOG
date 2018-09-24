@@ -81,7 +81,7 @@ def ComputeJac(x):
     E=x[2:]
     # Compute numerically the gradients along L
     Attempt1 = ComputeLagComponents(x)
-    #print(L, Attempt1[0], Attempt1[1], np.mean(E[E!=0]), np.std(E[E!=0]), Mu)
+    print(L, Attempt1[0], Attempt1[1], np.mean(E[E!=0]), np.std(E[E!=0]), Mu)
 
     xdL=x
     xdL[0]=L+dL
@@ -105,7 +105,7 @@ def ComputeLagComponents(x):
     Mu=x[1]
     E=x[2:]
     E=np.reshape(E,np.shape(Tb))
-    print("Depth:", L, "Mu:", Mu, "E:", np.mean(E[E!=0]))
+    #print("Depth:", L, "Mu:", Mu, "E:", np.mean(E[E!=0]))
     Teff=ComputeTeff(L)
     TbObs=Mask*Tb
     Tbmod=E*Teff
@@ -168,7 +168,8 @@ Y = Obs.variables['y_ease2']
 nc_obsattrs, nc_obsdims, nc_obsvars = ncr.ncdump(Obs)
 
 # Import temperature data
-GRISLI = netCDF4.Dataset('../../SourceData/WorkingFiles/TB40S123_1_Corrected4Ts.nc')
+#GRISLI = netCDF4.Dataset('../../SourceData/WorkingFiles/TB40S123_1_Corrected4Ts.nc')
+GRISLI = netCDF4.Dataset('../../SourceData/GRISLI/Avec_FoxMaule/Corrected_Tz_MappedonSMOS.nc')
 H = np.array(GRISLI.variables['H'])
 Zeta = GRISLI.variables['Zeta']
 Tz_gr = GRISLI.variables['T']

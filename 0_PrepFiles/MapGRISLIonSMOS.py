@@ -3,7 +3,7 @@
 #
 import sys
 sys.path.insert(0, "/home/passalao/Documents/SMOS-FluxGeo/BIOG")
-from netCDF4 import Dataset  # http://code.google.com/p/netcdf4-python/
+from netCDF4 import Dataset
 import netCDF4, BIOG
 import matplotlib.pyplot as plt
 import matplotlib as mpl
@@ -13,7 +13,8 @@ import scipy.interpolate as si
 import NC_Resources as ncr
 
 # Import GRISLI data
-Model = netCDF4.Dataset('../../SourceData/WorkingFiles/TB40S004_1_KERAS.nc')
+#Model = netCDF4.Dataset('../../SourceData/WorkingFiles/TB40S004_1_KERAS.nc')
+Model = netCDF4.Dataset('../../SourceData/GRISLI/Avec_FoxMaule/Corrected_Tz_GRISLI.nc')
 ny_Mod = Model.dimensions['y'].size
 nx_Mod = Model.dimensions['x'].size
 nz_Mod = Model.dimensions['z'].size
@@ -54,7 +55,7 @@ Y = np.reshape(YY, (nx_Obs, ny_Obs))
 Tb_Obs=Tb_Obs[0,:,:]
 
 #Create new NetCDF fil for interpolated data
-nc_interp = Dataset('../../SourceData/WorkingFiles/TB40S004_1_MappedonSMOS.nc', 'w', format='NETCDF4')
+nc_interp = Dataset('../../SourceData/GRISLI/Avec_FoxMaule/Corrected_Tz_MappedonSMOS.nc', 'w', format='NETCDF4')
 nc_interp.description = "GRISLI data mapped on SMOS grid"
 
 #Create NetCDF dimensions
@@ -69,6 +70,7 @@ nc_interp.createDimension('z', Model.dimensions['z'].size)
 
 #Interpolates GRISLI on SMOS grid
 for var in Model.variables:
+    print(var)
     if Model.variables[var].dimensions==('y','x'):
         print("Interpolating ", var)
         nc_interp.createVariable(var, 'float64', ('x','y'))
@@ -84,8 +86,9 @@ for var in Model.variables:
             f = si.interp2d(xG, yG, Model.variables[var][k,:,:], kind='cubic')
             Interp_Var = f(X[0,:],Y[:,0])
             nc_interp.variables[var][:,:,k] = Interp_Var[::-1,:]
+nc_interp.close()
 
-# Geographic plot
+'''# Geographic plot
 fig, ax = plt.subplots(nrows=2, ncols=2, sharex='col')
 cmap = mpl.cm.coolwarm
 norm = mpl.colors.Normalize(vmin=180, vmax=250)
@@ -102,7 +105,7 @@ ax[0, 0].set_ylim([0, 201.])
 ax[1, 1].set_xlim([0, 141.])
 ax[1, 1].set_ylim([0, 201.])
 #plt.savefig("../../OutputData/img/Error_SMOS-sMod_DMRTML.png")
-plt.show()
+plt.show()'''
 
 '''# Geographic plot
 fig, ax = plt.subplots()
@@ -116,4 +119,3 @@ plt.axis('equal')
 plt.savefig("../../OutputData/img/Error_SMOS-sMod_DMRTML.png")
 plt.show()
 plt.close()'''
-nc_interp.close()

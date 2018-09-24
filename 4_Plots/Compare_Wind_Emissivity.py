@@ -44,7 +44,7 @@ plt.show()'''
 
 
 #Selection : East Antarctica, or West Antarctica
-Zone="East"#"West"
+Zone="West"#"West"
 if Zone=="East":
     E=E[:,112:224]
     Wind = Wind[:,112:224]
@@ -113,20 +113,20 @@ if Param=="Wind":
     x = x[x < 18]
     y = y[x > 10]
     x = x[x > 10]'''
-    y = y[x < 10]
-    x = x[x < 10]
-    y = y[x > 5]
-    x = x[x > 5]
+    y = y[x < 8]
+    x = x[x < 8]
+    y = y[x > 4]
+    x = x[x > 4]
 if Param=="Accu":
     y=y[x<0.18]
     x=x[x<0.18]
-    y=y[x>0.1]
-    x=x[x>0.1]
+    y=y[x>0.12]
+    x=x[x>0.12]
 
 from sklearn import linear_model
 regr = linear_model.RANSACRegressor()
 regr.fit(x[:,np.newaxis], y)
-#print("Coef : ", regr.estimator_.coef_)
+print("Coef : ", regr.estimator_.coef_)
 x_test = np.linspace(10, 24, 100)
 x_test = np.linspace(0, 12, 100)
 #x_test = np.linspace(0, 0.5, 100)
@@ -135,11 +135,11 @@ plt.plot(x_test, regr.predict(x_test[:,np.newaxis]), color='blue', linewidth=1)
 
 #Design of the plot features
 plt.xlim(minx, maxx)
-plt.ylim(0.95,1)
+plt.ylim(0.945,1.005)
 plt.xlabel('Wind speed (m/s)', fontsize=17)
-plt.xlabel('Accumulation (m/a)', fontsize=17)
+#plt.xlabel('Accumulation (m/a)', fontsize=17)
 plt.ylabel('Emissivity', fontsize=17)
 plt.xticks(fontsize=15)
 plt.yticks(fontsize=15)
-plt.text(11,.955, Zone, size=17)
+plt.text(4,.955, Zone, size=17)
 plt.show()
