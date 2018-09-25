@@ -37,9 +37,9 @@ TzGR = GRISLI.variables['T']
 nc_modattrs, nc_moddims, nc_modvars = ncr.ncdump(GRISLI)
 
 #Drill sites
-Sites=['DomeC', 'Vostok', 'DomeFuji', 'EDML','Byrd','LawDome', 'Berkner', 'SipleDome',]
-Lon=[123.3952,106.7114,39.7222,0.05161,-119.31,112.8067, -45.6783, -149.2426,]
-Lat=[-75.1017,-78.4719,-77.3088,-75.00,-80.01,-66.7391, -79.5483, -81.6620,]
+Sites=['DomeC', 'Vostok', 'DomeFuji', 'EDML','Byrd','LawDome']#, 'Berkner']#, 'SipleDome',]
+Lon=[123.3952,106.7114,39.7222,0.05161,-119.31,112.8067]#, -45.6783]#, -149.2426,]
+Lat=[-75.1017,-78.4719,-77.3088,-75.00,-80.01,-66.7391]#, -79.5483]#, -81.6620,]
 wgs84 = pyproj.Proj("+init=EPSG:4326")
 StereoPol = pyproj.Proj(init="EPSG:6932")
 Xs, Ys = pyproj.transform(wgs84, StereoPol, Lon, Lat)

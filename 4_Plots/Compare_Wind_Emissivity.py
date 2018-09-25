@@ -24,7 +24,7 @@ Obs = netCDF4.Dataset('../../SourceData/Accu/Arthern2006_align.nc', nodata="--")
 Accu = Obs.variables['Band1']
 
 # Import Emissivity data
-Obs = netCDF4.Dataset('../../SourceData/WorkingFiles/Emissivity_FromMatzler_GaussLegendre.nc')#radientDescent_Scipy4QGIS.nc')
+Obs = netCDF4.Dataset('../../SourceData/GRISLI/Avec_FoxMaule/Emissivity_FromMatzler_GaussLegendre.nc')#radientDescent_Scipy4QGIS.nc')
 E = Obs.variables['Emissivity']
 
 #Resize the Wind and Accu files
@@ -56,7 +56,7 @@ if Zone=="West":
     Accu = Accu[:, 0:112]
 
 #Selection : Accumulation or Wind
-Param="Accu" #"Accu" or "Wind"
+Param="Wind" #"Accu" or "Wind"
 
 Wind1D=np.reshape(Wind, (1, np.size(Wind)))
 Accu1D=np.reshape(Accu, (1, np.size(Accu)))

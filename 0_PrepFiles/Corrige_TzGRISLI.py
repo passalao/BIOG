@@ -67,8 +67,8 @@ for i in np.arange(0,140,1):
     for j in np.arange(0, 140, 1):
         ReducedT[:,i,j]=(Tz[:,i,j]-Tz[20,i,j])/(Tz[0,i,j]-Tz[20,i,j])
 
-#[[plt.plot(ReducedT[:, i, j], np.arange(0,21,1), linewidth=0.1, c='k') for i in np.arange(50,55,1)] for j in np.arange(110,115,1)]
-#plt.show()
+[[plt.plot(ReducedT[:, i, j], 0.05*np.arange(20,-1,-1), linewidth=0.1, c='k') for i in np.arange(38,41,1)] for j in np.arange(110,113,1)]
+plt.show()
 
 #Critical ice thickness:
 #Considering that Rapp=3e-4 where basal ice is cold
@@ -82,16 +82,16 @@ NewTbasal=np.zeros(np.shape(H))
 for i in np.arange(0,140,1):
     for j in np.arange(0, 140, 1):
         if H[i,j]<Hc[i,j]:
-            NewTbasal[i,j]=Rapp[i,j]*HBedmap[i,j]*GHF[i,j]/TsCrocus[i,j]
+            NewTbasal[i,j]=max(-273.15,Rapp[i,j]*HBedmap[i,j]*GHF[i,j]/TsCrocus[i,j])#Avoid dummy temperatures
         else:
             NewTbasal[i,j]=Tbasal[i,j]
 
-#Ici autour de chaque point assigner la forme moyenne de 25 points autour
+#Ici autour de chaque point assigner la forme moyenne des points autour
 print("Assign local average shape")
 MeanReducedT=np.zeros(np.shape(Tz))
 for i in np.arange(2,138,1):
     for j in np.arange(2, 138, 1):
-        MeanReducedT[:,i,j]=np.mean(ReducedT[:,i-2:i+2,j-2:j+2], axis=(1,2))
+        MeanReducedT[:,i,j]=np.mean(ReducedT[:,i-1:i+1,j-1:j+1], axis=(1,2))
 
 #Reconstruire un T(z) à partir de la forme
 print("Build the new T profile")

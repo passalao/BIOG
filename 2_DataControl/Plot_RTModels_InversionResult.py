@@ -49,12 +49,13 @@ StartE=l/(4*math.pi*StartL)*(Real_E[0])**0.5
 #L_inv=np.array([448,301,331,286,255,258]) #East Antarctica
 
 T_inv=np.arange(-60,-25,5)+273.15+2.5
-L_inv=np.array([446,531,411,306,265,138,123]) #East Antarctica
+L_inv=np.array([396,502,421,357,305,288,273]) #East Antarctica
 
 E_inv=l/(4*math.pi*L_inv)*(Real_E[0])**0.5
 
-T_inv2=np.arange(-40,-15,5)+273.15+2.5
-L_inv2=np.array([376,235,198,103, 101]) #West Antarctica
+T_inv2=np.arange(-45,-15,5)+273.15+2.5
+print(T_inv2)
+L_inv2=np.array([446,240,298,163,141,71]) #West Antarctica
 E_inv2=l/(4*math.pi*L_inv2)*(Real_E[0])**0.5
 
 #Discrepancy between retrieval and Mätzler
