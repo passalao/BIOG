@@ -26,10 +26,11 @@ Accu = Obs.variables['Band1']
 # Import Emissivity data
 Obs = netCDF4.Dataset('../../SourceData/GRISLI/Avec_FoxMaule/Emissivity_FromMatzler_GaussLegendre.nc')#radientDescent_Scipy4QGIS.nc')
 E = Obs.variables['Emissivity']
-
+TETs = Obs.variables['TE-Ts']
 #Resize the Wind and Accu files
 Wind=Wind[:,3:-3]
 Accu=Accu[:,1:-1]
+
 
 '''fig, ax = plt.subplots(nrows=1, ncols=1)
 #norm = mpl.colors.Normalize(vmin=10, vmax=30)
@@ -47,54 +48,54 @@ plt.show()'''
 Zone="West"#"West"
 if Zone=="East":
     E=E[:,112:224]
+    TETs=TETs[:,112:224]
     Wind = Wind[:,112:224]
     Accu = Accu[:,112:224]
 
 if Zone=="West":
     E=E[:,0:112]
+    TETs=TETs[:,0:112]
     Wind = Wind[:,0:112]
     Accu = Accu[:, 0:112]
 
 #Selection : Accumulation or Wind
-Param="Wind" #"Accu" or "Wind"
+Param="Accu" #"Accu" or "Wind"
 
 Wind1D=np.reshape(Wind, (1, np.size(Wind)))
 Accu1D=np.reshape(Accu, (1, np.size(Accu)))
+TETs1D=np.reshape(TETs, (1, np.size(Accu)))
 Accu1D[Accu1D>1e+38]=0.0
 
 E1D=np.reshape(E, (1, np.size(E)))
 Wind1D=Wind1D[E1D<=1]
 Accu1D=Accu1D[E1D<=1]
+TETs1D=TETs1D[E1D<=1]
 E1D=E1D[E1D<1]
 
-Wind1D = Wind1D[E1D > 0.95]
+'''Wind1D = Wind1D[E1D > 0.95]
 Accu1D = Accu1D[E1D > 0.95]
-E1D=E1D[E1D>0.95]
+TETs1D=TETs1D[E1D>0.95]
+E1D=E1D[E1D>0.95]'''
+
+'''Wind1D = Wind1D[TETs1D > 0]
+Accu1D = Accu1D[TETs1D > 0]
+E1D=E1D[TETs1D > 0]
+TETs1D=TETs1D[TETs1D > 0]'''
 
 if Param=="Wind":
     x=Wind1D
-    minx=3
-    maxx=12
+    minx=4
+    maxx=11
+    unit="m/s"
 if Param=="Accu":
     x=Accu1D
     minx=0
     maxx=0.3
+    unit="m/a"
 
 y=E1D
-y=y[x>0]
-x=x[x>0]
-
-'''cmap='jet'
-norm = mpl.colors.Normalize(vmin=0.95,vmax=1.)
-ax=plt.scatter(Wind1D, Accu1D, s=1.5, c=E1D, cmap=cmap, norm=norm)
-plt.colorbar(ax)
-plt.xlim(10,28)
-plt.xlabel('Wind (m/s)')
-plt.ylabel('Accu (m/a)')
-plt.ylim(0,0.5)
-plt.plot()
-plt.show()'''
-
+#y=y[x>0]
+#x=x[x>0]
 
 ##############################################################
 #Plot kernel density
@@ -105,16 +106,23 @@ sns.set(style="white")
 # Show the joint distribution using kernel density estimation
 x1 = pd.Series(x)#, name="Wind speed (m/s)")
 x2 = pd.Series(y)#, name="Emissivity")
-g = sns.kdeplot(x1, x2, shade=True)# ,cmap=Color)
+#g = sns.kdeplot(x1, x2, shade=True, alpha=0.5)# ,cmap=Color)
+
+#Scatterplot
+#cmap='jet'
+norm = mpl.colors.Normalize(vmin=0.95,vmax=1.)
+ax=plt.scatter(x[TETs1D > 0], y[TETs1D > 0], c="b", s=2, linewidth=0)
+ax=plt.scatter(x[TETs1D < 0], y[TETs1D < 0], c="r", s=2, linewidth=0)
+
+#plt.colorbar(ax)
+#plt.xlim(10,28)
+#plt.ylim(0,0.5)
+#plt.plot()
 
 #Plot the regression line, on a selection of points
-if Param=="Wind":
-    '''y = y[x < 18]
-    x = x[x < 18]
-    y = y[x > 10]
-    x = x[x > 10]'''
-    y = y[x < 8]
-    x = x[x < 8]
+'''if Param=="Wind":
+    y = y[x < 9]
+    x = x[x < 9]
     y = y[x > 4]
     x = x[x > 4]
 if Param=="Accu":
@@ -131,13 +139,12 @@ x_test = np.linspace(10, 24, 100)
 x_test = np.linspace(0, 12, 100)
 #x_test = np.linspace(0, 0.5, 100)
 
-plt.plot(x_test, regr.predict(x_test[:,np.newaxis]), color='blue', linewidth=1)
+plt.plot(x_test, regr.predict(x_test[:,np.newaxis]), color='blue', linewidth=1)'''
 
 #Design of the plot features
 plt.xlim(minx, maxx)
-plt.ylim(0.945,1.005)
-plt.xlabel('Wind speed (m/s)', fontsize=17)
-#plt.xlabel('Accumulation (m/a)', fontsize=17)
+plt.ylim(0.93,1.005)
+plt.xlabel(Param+" "+unit, fontsize=17)
 plt.ylabel('Emissivity', fontsize=17)
 plt.xticks(fontsize=15)
 plt.yticks(fontsize=15)

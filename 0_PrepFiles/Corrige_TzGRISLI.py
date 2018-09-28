@@ -40,6 +40,9 @@ Ubar=Uxbar**2+Uybar**2
 Taub=1e-3*Model.variables['phid'][0]
 DefHeat=Ubar*Taub
 
+Mask=np.zeros(np.shape(H))
+Mask[H>=10]=1.0
+
 # Import Bedmap2 ice thickness
 dataset = gdal.Open('../../SourceData/GRISLI/HBedmap_GRISLI.tif', gdal.GA_ReadOnly)
 for x in range(1, dataset.RasterCount + 1):
@@ -68,7 +71,7 @@ for i in np.arange(0,140,1):
         ReducedT[:,i,j]=(Tz[:,i,j]-Tz[20,i,j])/(Tz[0,i,j]-Tz[20,i,j])
 
 [[plt.plot(ReducedT[:, i, j], 0.05*np.arange(20,-1,-1), linewidth=0.1, c='k') for i in np.arange(38,41,1)] for j in np.arange(110,113,1)]
-plt.show()
+#plt.show()
 
 #Critical ice thickness:
 #Considering that Rapp=3e-4 where basal ice is cold
@@ -91,7 +94,9 @@ print("Assign local average shape")
 MeanReducedT=np.zeros(np.shape(Tz))
 for i in np.arange(2,138,1):
     for j in np.arange(2, 138, 1):
-        MeanReducedT[:,i,j]=np.mean(ReducedT[:,i-1:i+1,j-1:j+1], axis=(1,2))
+        #MeanReducedT[:,i,j]=np.mean(ReducedT[:,i-1:i+1,j-1:j+1], axis=(1,2))
+        if np.sum(Mask[i - 1:i + 1, j - 1:j + 1])!=0:
+            MeanReducedT[:, i, j] = np.sum(ReducedT[:, i - 1:i + 1, j - 1:j + 1]*Mask[i - 1:i + 1, j - 1:j + 1], axis=(1,2))/np.sum(Mask[i - 1:i + 1, j - 1:j + 1])
 
 #Reconstruire un T(z) à partir de la forme
 print("Build the new T profile")

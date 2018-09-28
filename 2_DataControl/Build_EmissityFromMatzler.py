@@ -18,19 +18,9 @@ def ComputeTeff():
     Teff=np.zeros(np.shape(H))
     for i in np.arange(0,np.shape(H)[0], 1):
         for j in np.arange(0,np.shape(H)[1], 1):
-            if H[i,j]>1.0:
+            if H[i,j]>10:
                 Perm = Permittivity(Tz_gr[i, j], i, j)
-
                 Lz = l / (4 * math.pi * Perm[1, :]) * np.sqrt(Perm[0,:])
-                z = (1 - Zeta[i, j]) * H[i, j]
-                dz=0.05*H[i,j]
-
-                '''IntExp=np.zeros(np.size(Lz))
-                for k in np.arange(0,np.size(Lz)-1,1):
-                    IntExp[k]=sum(((1/Lz[0:-2]+1/Lz[1:-1])/2*dz)[0:k])'''
-
-                #Computation of effective temperature. It seems OK, a bit low maybe. It is better with GL integration.
-                #Teff[i,j]=sum((Tz_gr[i,j][0:-2]/Lz[0:-2]*np.exp(-IntExp[0:-2])+(Tz_gr[i,j][1:-1]/Lz[1:-1]*np.exp(-IntExp[1:-1])))/2*dz)
 
                 #Gauss-Legendre integration (default interval is [-1,1])
                 deg = 10
@@ -39,8 +29,8 @@ def ComputeTeff():
                 b=1
                 t = 0.5 * (x + 1) * (b - a) + a
                 Teff[i, j] = sum(w * Integrand(t,Tz_gr[i, j], Lz, H[i, j])) * 0.5 * (b - a)
-                #if i==123 and j==191:
-                #    print(Perm[0,:], Perm[1,:], np.exp(-9.963 + 0.0372 * (Tz_gr[i, j] - 273.16)))
+                #if Teff[i,j]<210:
+                #    print(i,j,  H[i, j])#Perm[0,:], Perm[1,:] )
     return Teff
 
 def Integrand2(zeta2, Lz2,H):
@@ -63,7 +53,7 @@ def Integrand(zeta,Tz,Lz,H):
         a1 = 0
         b1 = zeta[k]
         t1 = 0.5 * (x1 + 1) * (b1 - a1) + a1
-        IntExp[k] = max(sum(w1 * Integrand2(t1,L,H) * 0.5 * (b1 - a1)), -10)
+        IntExp[k] = sum(w1 * Integrand2(t1,L,H) * 0.5 * (b1 - a1))
     return T * H * np.exp(-IntExp) / L
 
 def Permittivity(T, i, j):
@@ -73,9 +63,8 @@ def Permittivity(T, i, j):
     e_ice=np.zeros((2,np.size(T)))
     e_ice[0,:] = 3.1884 + 9.1e-4 * (T - 273.0)
     theta = 300.0 / T - 1.0
-    if i == 123 and j == 190:
-
-        print( T, (0.00504 + 0.0062 * theta) * np.exp(-22.1 * theta))
+    #if i == 123 and j == 190:
+    #    print( T, (0.00504 + 0.0062 * theta) * np.exp(-22.1 * theta))
 
     alpha = (0.00504 + 0.0062 * theta) * np.exp(-22.1 * theta)
     B1 = 0.0207
@@ -119,12 +108,14 @@ nc_obsattrs, nc_obsdims, nc_obsvars = ncr.ncdump(Obs)
 #GRISLI = netCDF4.Dataset('../../SourceData/WorkingFiles/TB40S123_1_Corrected4Ts.nc')
 GRISLI = netCDF4.Dataset('../../SourceData/GRISLI/Avec_FoxMaule/Corrected_Tz_MappedonSMOS.nc')
 H = np.array(GRISLI.variables['H'])
-Zeta = GRISLI.variables['Zeta']
+#Zeta = GRISLI.variables['Zeta']
 Tz_gr = GRISLI.variables['T']
 Ts=Tz_gr[:,:,0]
 Tz_gr=np.array(Tz_gr)+273.15
 
-#nc_obsattrs, nc_obsdims, nc_obsvars = ncr.ncdump(GRISLI)
+#Ici : ajouter un sol d'épaisseur 500 m à température 273.15 à Tz_gr
+Tsol=273.15*np.ones((201,225,1))
+#Tz_gr=np.concatenate((Tz_gr,Tsol), axis=2)
 
 
 Mask=np.zeros(np.shape(H))
@@ -143,8 +134,6 @@ for i in np.arange(0,201,1):
 
         if np.isnan(Teff[i, j]):
             Teff[i, j]=0.0
-
-print(np.shape(Teff))
 
 Emissivity=Emissivity*Mask
 TeTs=Teff-Ts-273.15
