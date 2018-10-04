@@ -10,7 +10,7 @@ from numpy import loadtxt
 
 ##############################################################
 #Import data  of retrieval process
-Data = loadtxt("../../OutputData/InversionProcess_40-35East.csv", comments="#", delimiter=" ", unpack=False)
+Data = loadtxt("../../OutputData/InversionProcess_45-40East.csv", comments="#", delimiter=" ", unpack=False)
 Depth=Data[:,0]
 J=(Data[:,1])**0.5
 R=(Data[:,2])**0.5

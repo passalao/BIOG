@@ -58,6 +58,8 @@ def ComputeMask(Zone):
             if Zone == "West":
                 if Tref>TsMin and Tref<TsMax and H[i,j]>1 and j<112:
                     Mask[i,j]=1
+            if Zone == "None":
+                Mask[i, j] = 1
     return Mask
 
 #Computes an initial semi-random emissivity field
@@ -110,6 +112,7 @@ def ComputeLagComponents(x):
     TbObs=Mask*Tb
     Tbmod=E*Teff
     Teff1D=np.reshape(Teff, (1,np.size(Teff)))[0,:]
+    Ts1D=np.reshape(Ts, (1,np.size(Teff)))[0,:]
     Tbmod1D=np.reshape(Tbmod, (1,np.size(Tbmod)))[0,:]
     TbObs1D=np.reshape(TbObs, (1,np.size(TbObs)))[0,:]
     Emiss1D=np.reshape(E, (1,np.size(Emissivity)))[0,:]
@@ -192,8 +195,9 @@ FinalTeff=np.zeros(np.shape(Ts))
     TsMax = t + DeltaT
     TsMin = t'''
 
-Zones=["East", "West"]
+Zones=["None"]#""East", "West"]
 
+Temperatures = np.arange(-60,-10,5)
 for z in Zones:
     if z=="East":
         Temperatures = [-60,-55,-50, -45, -40, -35, -30, -25]
@@ -212,7 +216,7 @@ for z in Zones:
         Mu=100
         Lambda=0
         Mask=ComputeMask(z)
-        Emissivity=InitEmissivity(Depth,0)
+        Emissivity=InitEmissivity(Depth,0.5)
         dL=10
 
         Emissivity=np.reshape(Emissivity,(1,np.size(Emissivity)))
